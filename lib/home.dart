@@ -6,6 +6,8 @@ import 'pages/page4.dart'; // Weekly Feedback
 import 'pages/page5.dart'; // Achievements
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -14,7 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Default to Schedule page (index 2)
   int _selectedIndex = 2;
 
-  final List<Widget> _pages = [
+  final List<Widget> _pages = const [
     Page1(), // Read About
     Page2(), // Profile
     Page3(), // Schedule
