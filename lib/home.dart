@@ -6,7 +6,7 @@ import 'pages/page4.dart'; // Weekly Feedback
 import 'pages/page5.dart'; // Achievements
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
