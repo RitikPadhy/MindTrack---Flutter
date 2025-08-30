@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Mind Track',
       theme: ThemeData(
-        useMaterial3: true, // Enables modern Material Design
+        useMaterial3: true,
         colorSchemeSeed: Colors.blue,
       ),
       home: const HomeScreen(), // Add const if HomeScreen constructor is const
