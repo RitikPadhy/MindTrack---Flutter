@@ -120,7 +120,6 @@ class ApiService {
       final addresses = await InternetAddress.lookup(host);
       return addresses;
     } on SocketException catch (e) {
-      print("DNS lookup failed for $baseUrl: $e");
       return [];
     }
   }
