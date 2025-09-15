@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  final String baseUrl = "http://api.mindtracker.dedyn.io/auth"; // your backend
+  // ✅ Use HTTPS (production-ready)
+  final String baseUrl = "https://api.mindtracker.dedyn.io/auth";
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   // ---------- Signup ----------
@@ -26,7 +27,7 @@ class ApiService {
     );
 
     if (resp.statusCode != 200) {
-      final error = jsonDecode(resp.body)['detail'] ?? 'Sign up failed';
+      final error = _safeError(resp.body, "Sign up failed");
       throw Exception(error);
     }
 
@@ -49,14 +50,14 @@ class ApiService {
     );
 
     if (resp.statusCode != 200) {
-      final error = jsonDecode(resp.body)['detail'] ?? 'Login failed';
+      final error = _safeError(resp.body, "Login failed");
       throw Exception(error);
     }
 
     final data = jsonDecode(resp.body);
 
-    // Save access token in secure storage
-    final token = data['idToken'];
+    // ✅ Store the correct token (check your backend response key: access_token vs idToken)
+    final token = data['access_token'] ?? data['idToken'];
     if (token != null) {
       await _storage.write(key: 'access_token', value: token);
     }
@@ -79,7 +80,8 @@ class ApiService {
     );
 
     if (resp.statusCode != 200) {
-      throw Exception("Failed to fetch profile: ${resp.body}");
+      final error = _safeError(resp.body, "Failed to fetch profile");
+      throw Exception(error);
     }
 
     return jsonDecode(resp.body);
@@ -101,10 +103,20 @@ class ApiService {
     );
 
     if (resp.statusCode != 200) {
-      throw Exception("Logout failed: ${resp.body}");
+      final error = _safeError(resp.body, "Logout failed");
+      throw Exception(error);
     }
 
-    // Delete token from secure storage
+    // ✅ Clear token after logout
     await _storage.delete(key: 'access_token');
+  }
+
+  // ---------- Helper ----------
+  String _safeError(String body, String fallback) {
+    try {
+      return jsonDecode(body)['detail'] ?? fallback;
+    } catch (_) {
+      return fallback;
+    }
   }
 }
