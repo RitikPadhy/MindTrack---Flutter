@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'home.dart';
+import 'package:mind_track/pages/auth/auth_page.dart';
 
 void main() {
-  runApp(const MyApp()); // Add const here
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -11,13 +11,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Mind Track',
+      title: 'Better Days Daily',
       theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.blue,
+        primarySwatch: Colors.blue,
       ),
-      home: const HomeScreen(), // Add const if HomeScreen constructor is const
+      debugShowCheckedModeBanner: false,
+      home: const AuthPage(), // Start with the AuthPage
     );
   }
 }
