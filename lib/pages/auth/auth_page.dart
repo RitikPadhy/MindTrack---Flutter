@@ -69,11 +69,13 @@ class _AuthPageState extends State<AuthPage> {
         });
       }
     } catch (e) {
-      if (!mounted) return;
-      _showMessage(e.toString());
+      if (mounted) {
+        _showMessage(e.toString());
+      }
     } finally {
-      if (!mounted) return;
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
