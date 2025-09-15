@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mind_track/pages/main/main_view.dart';
@@ -95,7 +94,7 @@ class _AuthPageState extends State<AuthPage> {
             child: Image.asset('assets/images/logo.jpg', fit: BoxFit.cover),
           ),
           Positioned.fill(
-            child: Container(color: Colors.black.withOpacity(0.01)),
+            child: Container(color: Colors.black.withAlpha((0.01 * 255).round())),
           ),
           Positioned.fill(
             child: Image.asset('assets/images/logo.jpg', fit: BoxFit.contain),
@@ -113,7 +112,7 @@ class _AuthPageState extends State<AuthPage> {
                     Container(
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withAlpha((0.9 * 255).round()),
                         borderRadius: BorderRadius.circular(6.0),
                       ),
                       child: TextFormField(
@@ -134,7 +133,7 @@ class _AuthPageState extends State<AuthPage> {
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withAlpha((0.9 * 255).round()),
                       borderRadius: BorderRadius.circular(6.0),
                     ),
                     child: TextFormField(
@@ -155,7 +154,7 @@ class _AuthPageState extends State<AuthPage> {
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withAlpha((0.9 * 255).round()),
                       borderRadius: BorderRadius.circular(6.0),
                     ),
                     child: TextFormField(
