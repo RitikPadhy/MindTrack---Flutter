@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
   // ✅ Use HTTPS (production-ready)
-  final String baseUrl = "https://api.mindtracker.dedyn.io/auth";
+  final String baseUrl = "https://api.mindtrack.shop/auth";
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   // ---------- Signup ----------
