@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  final String baseUrl = "http://13.233.212.132/auth"; // your backend
+  final String baseUrl = "http://13.233.212.132:8000/auth"; // your backend
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   // ---------- Signup ----------
