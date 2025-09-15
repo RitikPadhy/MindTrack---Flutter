@@ -119,7 +119,7 @@ class ApiService {
       final host = uri.host; // 'api.mindtrack.shop'
       final addresses = await InternetAddress.lookup(host);
       return addresses;
-    } on SocketException catch (e) {
+    } on SocketException {
       return [];
     }
   }
