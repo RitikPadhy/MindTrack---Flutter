@@ -51,23 +51,28 @@ class _AuthPageState extends State<AuthPage> {
       if (_isLogin) {
         // Login
         await _api.login(email: email, password: password);
-        await _api.getProfile(); // Optional: just fetch profile if needed
+        await _api.getProfile();
+
+        // Only use context if widget is still mounted
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const MainView()),
         );
       } else {
         // Signup
         await _api.signup(uid: uid, email: email, password: password);
-        // Switch to login mode silently without showing a message
+
+        if (!mounted) return;
         setState(() {
           _isLogin = true;
           _userIdController.clear();
         });
       }
     } catch (e) {
-      // Only show errors, not success messages
+      if (!mounted) return;
       _showMessage(e.toString());
     } finally {
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }
@@ -80,7 +85,11 @@ class _AuthPageState extends State<AuthPage> {
           Positioned.fill(
             child: Image.asset('assets/images/logo.jpg', fit: BoxFit.cover),
           ),
-          Positioned.fill(child: Container(color: Colors.black.withOpacity(0.01))),
+          Positioned.fill(
+            child: Container(
+              color: Color.fromRGBO(0, 0, 0, 0.01), // black with 1% opacity
+            ),
+          ),
           Positioned.fill(
             child: Image.asset('assets/images/logo.jpg', fit: BoxFit.contain),
           ),
@@ -97,7 +106,7 @@ class _AuthPageState extends State<AuthPage> {
                     Container(
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Color.fromRGBO(255, 255, 255, 0.9),
                         borderRadius: BorderRadius.circular(6.0),
                       ),
                       child: TextFormField(
@@ -117,7 +126,7 @@ class _AuthPageState extends State<AuthPage> {
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Color.fromRGBO(255, 255, 255, 0.9),
                       borderRadius: BorderRadius.circular(6.0),
                     ),
                     child: TextFormField(
@@ -137,7 +146,7 @@ class _AuthPageState extends State<AuthPage> {
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Color.fromRGBO(255, 255, 255, 0.9),
                       borderRadius: BorderRadius.circular(6.0),
                     ),
                     child: TextFormField(

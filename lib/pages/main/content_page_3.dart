@@ -6,35 +6,31 @@ class ContentPage3 extends StatefulWidget {
   const ContentPage3({super.key});
 
   @override
-  _ContentPage3State createState() => _ContentPage3State();
+  ContentPage3State createState() => ContentPage3State(); // ✅ public state
 }
 
-class _ContentPage3State extends State<ContentPage3> {
+class ContentPage3State extends State<ContentPage3> {
   DateTime _currentDate = DateTime.now();
   DateTime _selectedDay = DateTime.now();
 
   void _previousMonth() {
     setState(() {
       _currentDate = DateTime(_currentDate.year, _currentDate.month - 1);
-      _selectedDay = _currentDate; // Reset selected day to the first of the new month
+      _selectedDay = _currentDate;
     });
   }
 
   void _nextMonth() {
     setState(() {
       _currentDate = DateTime(_currentDate.year, _currentDate.month + 1);
-      _selectedDay = _currentDate; // Reset selected day to the first of the new month
+      _selectedDay = _currentDate;
     });
   }
 
   void _previousDay() {
     setState(() {
-      // Prevent going back from the first day of the month
       if (_selectedDay.day > 1) {
         _selectedDay = _selectedDay.subtract(const Duration(days: 1));
-      } else {
-        // Option to move to previous month if desired, otherwise do nothing
-        // For now, we'll stay on the first day
       }
     });
   }
@@ -42,18 +38,14 @@ class _ContentPage3State extends State<ContentPage3> {
   void _nextDay() {
     setState(() {
       _selectedDay = _selectedDay.add(const Duration(days: 1));
-      // If the selected day goes into the next month, increment the month
       if (_selectedDay.month != _currentDate.month) {
         _currentDate = _selectedDay;
       }
     });
   }
 
-  // A helper function to build the day widgets for the week
   Widget _buildDayWidgets() {
     final List<Widget> dayWidgets = [];
-    final int selectedDayIndex = _selectedDay.weekday;
-    final int firstDayToShowIndex = selectedDayIndex - 2; // Show 2 days before and 2 after
 
     // Previous Day Button
     dayWidgets.add(
@@ -65,7 +57,7 @@ class _ContentPage3State extends State<ContentPage3> {
 
     // Build 5 day widgets
     for (int i = 0; i < 5; i++) {
-      final DateTime day = _selectedDay.add(Duration(days: i - 2)); // Calculate day based on index
+      final DateTime day = _selectedDay.add(Duration(days: i - 2));
       final String dayName = DateFormat('E').format(day);
       final String dayNumber = day.day.toString();
 
@@ -80,7 +72,7 @@ class _ContentPage3State extends State<ContentPage3> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: day.day == _selectedDay.day && day.month == _selectedDay.month
-                  ? Colors.blue.withOpacity(0.1)
+                  ? Color.fromRGBO(33, 150, 243, 0.1)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(10),
             ),
@@ -120,7 +112,6 @@ class _ContentPage3State extends State<ContentPage3> {
 
   @override
   Widget build(BuildContext context) {
-    // Format the current date for display
     final String monthYear = DateFormat('MMMM, yyyy').format(_currentDate).toUpperCase();
 
     return Scaffold(

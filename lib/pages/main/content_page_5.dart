@@ -106,20 +106,4 @@ class ContentPage5 extends StatelessWidget {
       ),
     );
   }
-
-  // Helper widget to build the footer icons
-  Widget _buildFooterIcon(IconData icon, {bool isSelected = false}) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.deepOrange.shade300 : Colors.transparent,
-        borderRadius: BorderRadius.circular(50),
-      ),
-      child: Icon(
-        icon,
-        size: 30,
-        color: isSelected ? Colors.white : Colors.black54,
-      ),
-    );
-  }
 }
