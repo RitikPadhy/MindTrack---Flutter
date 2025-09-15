@@ -1,5 +1,7 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // <-- add this
+import 'package:flutter/services.dart';
 import 'package:mind_track/pages/main/main_view.dart';
 import '../../services/api_service.dart';
 
@@ -14,19 +16,17 @@ class _AuthPageState extends State<AuthPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _userIdController = TextEditingController();
-
   final ApiService _api = ApiService();
+
   bool _isLogin = true;
   bool _loading = false;
 
   @override
   void initState() {
     super.initState();
-
-    // Make system nav bar an even darker shade of the app background
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        systemNavigationBarColor: Color(0xFF2A3848), // <-- Updated to the new color
+        systemNavigationBarColor: Color(0xFF2A3848),
         systemNavigationBarIconBrightness: Brightness.light,
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
@@ -40,7 +40,7 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  void _handleAuth() async {
+  Future<void> _handleAuth() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final uid = _userIdController.text.trim();
@@ -48,18 +48,29 @@ class _AuthPageState extends State<AuthPage> {
     setState(() => _loading = true);
 
     try {
+      // ---------- DNS Check ----------
+      try {
+        final addresses = await _api.resolveApi();
+        if (addresses.isEmpty) {
+          throw SocketException("No IP found for api.mindtrack.shop");
+        }
+      } on SocketException catch (_) {
+        _showMessage(
+          "Cannot reach server. Please check your internet or DNS settings.",
+        );
+        return;
+      }
+
+      // ---------- Login / Signup ----------
       if (_isLogin) {
-        // Login
         await _api.login(email: email, password: password);
         await _api.getProfile();
 
-        // Only use context if widget is still mounted
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const MainView()),
         );
       } else {
-        // Signup
         await _api.signup(uid: uid, email: email, password: password);
 
         if (!mounted) return;
@@ -69,13 +80,9 @@ class _AuthPageState extends State<AuthPage> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        _showMessage(e.toString());
-      }
+      if (mounted) _showMessage(e.toString());
     } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -88,9 +95,7 @@ class _AuthPageState extends State<AuthPage> {
             child: Image.asset('assets/images/logo.jpg', fit: BoxFit.cover),
           ),
           Positioned.fill(
-            child: Container(
-              color: Color.fromRGBO(0, 0, 0, 0.01), // black with 1% opacity
-            ),
+            child: Container(color: Colors.black.withOpacity(0.01)),
           ),
           Positioned.fill(
             child: Image.asset('assets/images/logo.jpg', fit: BoxFit.contain),
@@ -108,7 +113,7 @@ class _AuthPageState extends State<AuthPage> {
                     Container(
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Color.fromRGBO(255, 255, 255, 0.9),
+                        color: Colors.white.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(6.0),
                       ),
                       child: TextFormField(
@@ -119,7 +124,8 @@ class _AuthPageState extends State<AuthPage> {
                           hintStyle: TextStyle(fontSize: 12),
                           prefixIcon: Icon(Icons.person_outline, size: 14),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 7.0, horizontal: 8.0),
+                          contentPadding:
+                          EdgeInsets.symmetric(vertical: 7, horizontal: 8),
                         ),
                       ),
                     ),
@@ -128,7 +134,7 @@ class _AuthPageState extends State<AuthPage> {
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Color.fromRGBO(255, 255, 255, 0.9),
+                      color: Colors.white.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(6.0),
                     ),
                     child: TextFormField(
@@ -139,7 +145,8 @@ class _AuthPageState extends State<AuthPage> {
                         hintStyle: TextStyle(fontSize: 12),
                         prefixIcon: Icon(Icons.email_outlined, size: 14),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 7.0, horizontal: 8.0),
+                        contentPadding:
+                        EdgeInsets.symmetric(vertical: 7, horizontal: 8),
                       ),
                       keyboardType: TextInputType.emailAddress,
                     ),
@@ -148,7 +155,7 @@ class _AuthPageState extends State<AuthPage> {
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Color.fromRGBO(255, 255, 255, 0.9),
+                      color: Colors.white.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(6.0),
                     ),
                     child: TextFormField(
@@ -159,7 +166,8 @@ class _AuthPageState extends State<AuthPage> {
                         hintStyle: TextStyle(fontSize: 12),
                         prefixIcon: Icon(Icons.lock_outline, size: 14),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 7.0, horizontal: 8.0),
+                        contentPadding:
+                        EdgeInsets.symmetric(vertical: 7, horizontal: 8),
                       ),
                       obscureText: true,
                     ),
@@ -169,17 +177,27 @@ class _AuthPageState extends State<AuthPage> {
                     onPressed: _loading ? null : _handleAuth,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6B8ABF),
-                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.0)),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 8.0, horizontal: 16.0),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6.0)),
                       elevation: 4,
                     ),
                     child: _loading
                         ? const SizedBox(
-                      height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                         : Text(
                       _isLogin ? 'Sign In' : 'Create Account',
-                      style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -193,8 +211,11 @@ class _AuthPageState extends State<AuthPage> {
                       });
                     },
                     child: Text(
-                      _isLogin ? 'Need an account? Sign Up' : 'Already have an account? Sign In',
-                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                      _isLogin
+                          ? 'Need an account? Sign Up'
+                          : 'Already have an account? Sign In',
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 11),
                     ),
                   ),
                 ],

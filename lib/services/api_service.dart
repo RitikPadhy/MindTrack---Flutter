@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -56,8 +57,8 @@ class ApiService {
 
     final data = jsonDecode(resp.body);
 
-    // ✅ Store the correct token (check your backend response key: access_token vs idToken)
-    final token = data['access_token'];
+    // ✅ Store the correct token
+    final token = data['access_token'] ?? data['idToken'];
     if (token != null) {
       await _storage.write(key: 'access_token', value: token);
     }
@@ -109,6 +110,19 @@ class ApiService {
 
     // ✅ Clear token after logout
     await _storage.delete(key: 'access_token');
+  }
+
+  // ---------- DNS Check ----------
+  Future<List<InternetAddress>> resolveApi() async {
+    try {
+      final uri = Uri.parse(baseUrl);
+      final host = uri.host; // 'api.mindtrack.shop'
+      final addresses = await InternetAddress.lookup(host);
+      return addresses;
+    } on SocketException catch (e) {
+      print("DNS lookup failed for $baseUrl: $e");
+      return [];
+    }
   }
 
   // ---------- Helper ----------
