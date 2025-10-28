@@ -4,8 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  // ✅ Use HTTPS (production-ready)
-  final String baseUrl = "https://api.mindtrack.shop/auth";
+  final String baseUrl = "https://api.mindtrack.shop";
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   // ---------- Signup ----------
@@ -15,7 +14,7 @@ class ApiService {
     required String password,
     String role = "user",
   }) async {
-    final url = Uri.parse("$baseUrl/signup");
+    final url = Uri.parse("$baseUrl/auth/signup");
     final resp = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
@@ -40,7 +39,7 @@ class ApiService {
     required String email,
     required String password,
   }) async {
-    final url = Uri.parse("$baseUrl/login");
+    final url = Uri.parse("$baseUrl/auth/login");
     final resp = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
@@ -57,28 +56,42 @@ class ApiService {
 
     final data = jsonDecode(resp.body);
 
-    // ✅ Store the correct token
-    final token = data['access_token'] ?? data['idToken'];
+    // Store access token
+    final token = data['access_token'] ?? data['idToken'] ?? data['token'];
     if (token != null) {
       await _storage.write(key: 'access_token', value: token);
+    }
+
+    // Store refresh token
+    final refreshToken = data['refresh_token'];
+    if (refreshToken != null) {
+      await _storage.write(key: 'refresh_token', value: refreshToken);
     }
 
     return data;
   }
 
+  // ---------- Helper: Auth Headers ----------
+  Future<Map<String, String>> _authHeaders() async {
+    String? token = await _storage.read(key: 'access_token');
+    if (token == null) {
+      // Optionally refresh token if null
+      token = await _storage.read(key: 'access_token');
+      if (token == null) throw Exception("No access token found");
+    }
+
+    return {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer $token",
+    };
+  }
+
   // ---------- Get Profile ----------
   Future<Map<String, dynamic>> getProfile() async {
-    final token = await _storage.read(key: 'access_token');
-    if (token == null) throw Exception("No access token found. Please login first.");
+    final url = Uri.parse("$baseUrl/auth/me");
+    final headers = await _authHeaders();
 
-    final url = Uri.parse("$baseUrl/me");
-    final resp = await http.get(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-    );
+    final resp = await http.get(url, headers: headers);
 
     if (resp.statusCode != 200) {
       final error = _safeError(resp.body, "Failed to fetch profile");
@@ -90,16 +103,12 @@ class ApiService {
 
   // ---------- Logout ----------
   Future<void> logout(String uid) async {
-    final token = await _storage.read(key: 'access_token');
-    if (token == null) throw Exception("No access token found.");
+    final url = Uri.parse("$baseUrl/auth/logout");
+    final headers = await _authHeaders();
 
-    final url = Uri.parse("$baseUrl/logout");
     final resp = await http.post(
       url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
+      headers: headers,
       body: jsonEncode({"uid": uid}),
     );
 
@@ -108,15 +117,27 @@ class ApiService {
       throw Exception(error);
     }
 
-    // ✅ Clear token after logout
     await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
+  }
+
+  // ---------- Get Reading Material ----------
+  Future<Map<String, dynamic>> getReadingMaterial(int sectionId) async {
+    final url = Uri.parse("$baseUrl/reading/reading-material/$sectionId");
+    final resp = await http.get(url, headers: {"Content-Type": "application/json"});
+
+    if (resp.statusCode != 200) {
+      throw Exception("Failed to fetch section: ${resp.body}");
+    }
+
+    return jsonDecode(resp.body);
   }
 
   // ---------- DNS Check ----------
   Future<List<InternetAddress>> resolveApi() async {
     try {
       final uri = Uri.parse(baseUrl);
-      final host = uri.host; // 'api.mindtrack.shop'
+      final host = uri.host;
       final addresses = await InternetAddress.lookup(host);
       return addresses;
     } on SocketException {
@@ -124,10 +145,12 @@ class ApiService {
     }
   }
 
-  // ---------- Helper ----------
+  // ---------- Helper: Safe Error ----------
   String _safeError(String body, String fallback) {
     try {
-      return jsonDecode(body)['detail'] ?? fallback;
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded.containsKey('detail')) return decoded['detail'];
+      return body;
     } catch (_) {
       return fallback;
     }
