@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class ContentPage2 extends StatelessWidget {
@@ -7,18 +6,8 @@ class ContentPage2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ensure system nav bar stays consistent
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        systemNavigationBarColor: Colors.grey[200], // light grey
-        systemNavigationBarIconBrightness: Brightness.dark, // dark icons
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-    );
-
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey.shade50,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -30,7 +19,7 @@ class ContentPage2 extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.redAccent.shade100,
+                  color: Colors.green.shade900,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
@@ -44,7 +33,7 @@ class ContentPage2 extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 30), // Increased spacing
+              const SizedBox(height: 30),
 
               // Day/Week/Month Buttons
               Row(
@@ -56,7 +45,7 @@ class ContentPage2 extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 70), // Increased spacing
+              const SizedBox(height: 70),
 
               // Pie Chart
               SizedBox(
@@ -64,20 +53,30 @@ class ContentPage2 extends StatelessWidget {
                 child: PieChart(
                   PieChartData(
                     sections: _getSections(),
-                    sectionsSpace: 0, // Set sectionsSpace to 0 to remove gaps
+                    sectionsSpace: 4,
                     centerSpaceRadius: 70,
+                    borderData: FlBorderData(show: false),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 60), // Increased spacing
+              const SizedBox(height: 60),
 
               // Information Box
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E5),
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromRGBO(128, 128, 128, 0.1),
+                      spreadRadius: 1,
+                      blurRadius: 5,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.green.shade100),
                 ),
                 child: const Text(
                   'You have spent more time on productive tasks than usual',
@@ -90,7 +89,7 @@ class ContentPage2 extends StatelessWidget {
               ),
 
               const Spacer(),
-              const SizedBox(height: 20), // Padding at the bottom
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -102,9 +101,17 @@ class ContentPage2 extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
       decoration: BoxDecoration(
-        color: isSelected ? Colors.redAccent.shade100 : Colors.white,
-        border: Border.all(color: Colors.redAccent.shade100),
+        color: isSelected ? Colors.green.shade900 : Colors.white,
+        border: Border.all(color: Colors.green.shade100),
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(128, 128, 128, 0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Text(
         text,
@@ -116,43 +123,46 @@ class ContentPage2 extends StatelessWidget {
     );
   }
 
+  // --- Green gradient pie sections (50 → 300) ---
   List<PieChartSectionData> _getSections() {
-    return [
-      PieChartSectionData(
-        color: Colors.lightGreen.shade300,
-        value: 12.5,
-        title: 'self care\n12.5%',
-        radius: 100,
-        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
-      ),
-      PieChartSectionData(
-        color: Colors.blueGrey.shade700,
-        value: 44.4,
-        title: 'productivity\n44.4%',
-        radius: 100,
-        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
-      ),
-      PieChartSectionData(
-        color: Colors.blue.shade800,
-        value: 16.7,
-        title: 'leisure and hobbies\n16.7%',
-        radius: 100,
-        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
-      ),
-      PieChartSectionData(
-        color: Colors.cyan.shade400,
-        value: 13.7,
-        title: 'Home tasks\n13.7%',
-        radius: 100,
-        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
-      ),
-      PieChartSectionData(
-        color: Colors.orange.shade300,
-        value: 12.4,
-        title: 'social and community\n12.4%',
-        radius: 100,
-        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
-      ),
+    final titles = [
+      'Self\nCare',
+      'Productivity',
+      'Leisure\n& Hobbies',
+      'Home\nTasks',
+      'Social\n& Community',
     ];
+
+    final values = [12.5, 44.4, 16.7, 13.7, 12.4];
+
+    // Color range: from light green → deeper green
+    const startColor = Color(0xFF6BBF7A); // medium-dark green
+    const endColor = Color(0xFF3E8E41);   // slightly lighter than 0xFF2E7D32
+
+    Color interpolateColor(double t) {
+      // Linear interpolation between start and end colors
+      int r = (startColor.r + (endColor.r - startColor.r) * t).round();
+      int g = (startColor.g + (endColor.g - startColor.g) * t).round();
+      int b = (startColor.b + (endColor.b - startColor.b) * t).round();
+      return Color.fromRGBO(r, g, b, 1);
+    }
+
+    return List.generate(values.length, (i) {
+      final double t = values.length == 1 ? 0.0 : i / (values.length - 1);
+      final color = interpolateColor(t);
+
+      return PieChartSectionData(
+        color: color,
+        value: values[i],
+        title: titles[i],
+        radius: 105,
+        titlePositionPercentageOffset: 0.55,
+        titleStyle: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      );
+    });
   }
 }

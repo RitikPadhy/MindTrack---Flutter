@@ -1,5 +1,5 @@
 name: mind_track
-description: "A mobile app that digitizes activity schedules for individuals with mental illness, enabling them to track daily engagements digitally. It allows occupational therapists to monitor progress and provide personalized follow-ups in real time."
+description: "Digitizes daily activity schedules for individuals with mental illness; allows occupational therapists to monitor progress and provide personalized follow-ups in real time."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -20,8 +20,18 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1  # 👈 Added for app icon generation
+
+flutter_icons:  # 👇 App icon configuration
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"   # Optional: background color for Android adaptive icons
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/icon/
+    - assets/tasks

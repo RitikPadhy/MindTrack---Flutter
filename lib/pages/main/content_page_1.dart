@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mind_track/services/api_service.dart';
 
 class ContentPage1 extends StatelessWidget {
   const ContentPage1({super.key});
 
+  // Example card data
+  final List<Map<String, dynamic>> _cards = const [
+    {"id": 1, "text": "When you feel low, keep moving", "icon": Icons.directions_walk},
+    {"id": 2, "text": "Busy hands, calm mind", "icon": Icons.edit_note},
+    {"id": 3, "text": "Doing with others", "icon": Icons.people},
+    {"id": 4, "text": "Power of doing", "icon": Icons.star},
+  ];
+
   @override
   Widget build(BuildContext context) {
-    // Ensure system nav bar stays consistent
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        systemNavigationBarColor: Colors.grey[200], // light grey
-        systemNavigationBarIconBrightness: Brightness.dark, // dark icons
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-    );
-
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey.shade50,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -28,7 +27,7 @@ class ContentPage1 extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.redAccent.shade100,
+                  color: Colors.green.shade900,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
@@ -41,29 +40,16 @@ class ContentPage1 extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(height: 30),
 
-              _buildCard(
-                color: Colors.pink.shade100,
-                icon: Icons.directions_walk,
-                text: 'When you feel low, keep moving',
-              ),
-              _buildCard(
-                color: Colors.pink.shade100,
-                icon: Icons.edit_note,
-                text: 'Busy hands, calm mind',
-              ),
-              _buildCard(
-                color: Colors.pink.shade100,
-                icon: Icons.people,
-                text: 'Doing with others',
-              ),
-              _buildCard(
-                color: Colors.pink.shade100,
-                text: 'Power of doing',
-                showIcon: false,
-              ),
+              // Build all cards dynamically
+              for (var card in _cards)
+                _buildCard(
+                  color: Colors.white,
+                  icon: card["icon"],
+                  text: card["text"],
+                  onTap: () => _showSection(context, card["id"], card["text"]),
+                ),
             ],
           ),
         ),
@@ -76,50 +62,128 @@ class ContentPage1 extends StatelessWidget {
     required Color color,
     IconData? icon,
     required String text,
+    VoidCallback? onTap,
     bool showIcon = true,
   }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color.fromRGBO(128, 128, 128, 0.2),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color.fromRGBO(128, 128, 128, 0.1),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            if (showIcon)
+              Container(
+                height: 50,
+                width: 50,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  icon,
+                  size: 40,
+                  color: Colors.black,
+                ),
+              ),
+            if (showIcon) const SizedBox(width: 20),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          if (showIcon)
-            Container(
-              height: 50,
-              width: 50,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Icon(
-                icon,
-                size: 40,
-                color: Colors.black,
-              ),
-            ),
-          if (showIcon) const SizedBox(width: 20),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+    );
+  }
+
+  // Fetch section and show in scrollable dialog
+  void _showSection(BuildContext context, int sectionId, String title) async {
+    final api = ApiService();
+
+    // Dim system bars
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.black54,
+        systemNavigationBarIconBrightness: Brightness.light,
+        statusBarColor: Colors.black54,
+        statusBarIconBrightness: Brightness.light,
+      ),
+    );
+
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w500, // lighter font weight
           ),
-        ],
+        ),
+        content: FutureBuilder<Map<String, dynamic>>(
+          future: api.getReadingMaterial(sectionId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 150,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            } else if (snapshot.hasError) {
+              return Text("Error: ${snapshot.error}");
+            } else if (!snapshot.hasData || snapshot.data!['material'] == null) {
+              return const Text("No content available.");
+            } else {
+              final content = snapshot.data!['material'] as String;
+              return SizedBox(
+                height: 300,
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Center(
+                    child: Text(
+                      content,
+                      textAlign: TextAlign.center, // center-align text
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400, // lighter font weight
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    );
+
+    // Restore system bars after closing dialog
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
       ),
     );
   }

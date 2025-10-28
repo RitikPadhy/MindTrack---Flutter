@@ -1,39 +1,56 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:intl/intl.dart'; // ✅ for date formatting
 
-class ContentPage4 extends StatelessWidget {
+class ContentPage4 extends StatefulWidget {
   const ContentPage4({super.key});
 
   @override
+  State<ContentPage4> createState() => _ContentPage4State();
+}
+
+class _ContentPage4State extends State<ContentPage4> {
+  // 🎚️ Sliders’ state values (0–100)
+  double energy = 80;
+  double satisfaction = 60;
+  double happiness = 40;
+  double proud = 70;
+  double busy = 70;
+
+  @override
   Widget build(BuildContext context) {
-    // Ensure system nav bar stays consistent
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        systemNavigationBarColor: Colors.grey[200],
-        systemNavigationBarIconBrightness: Brightness.dark,
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-    );
+    // 🗓️ Get current week range (Monday → Sunday)
+    DateTime now = DateTime.now();
+    DateTime monday = now.subtract(Duration(days: now.weekday - 1));
+    DateTime sunday = monday.add(const Duration(days: 6));
+
+    // 📅 Format with full month names
+    String weekRange;
+    if (monday.month == sunday.month) {
+      weekRange =
+      '${DateFormat('d').format(monday)} – ${DateFormat('d MMMM').format(sunday)}';
+    } else {
+      weekRange =
+      '${DateFormat('d MMMM').format(monday)} – ${DateFormat('d MMMM').format(sunday)}';
+    }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey.shade50,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header Container (similar to Page4)
+              // Header Container
               Container(
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.redAccent.shade100,
+                  color: Colors.green.shade900,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
-                  'Achievements',
+                  'Weekly Feedback',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 22,
@@ -42,99 +59,38 @@ class ContentPage4 extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
 
-              const SizedBox(height: 20),
-
-              // Congratulations Card
-              Container(
-                padding:
-                const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color.fromRGBO(128, 128, 128, 0.2),
-                      spreadRadius: 1,
-                      blurRadius: 5,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Text(
-                  'Congratulate yourself for your achievements',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+              // Dynamic Week Range
+              Text(
+                weekRange,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Achievement Circle with stars
-              Center(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      height: 220,
-                      width: 220,
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade600,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    Positioned(
-                      top: 40,
-                      left: 60,
-                      child: Icon(Icons.star,
-                          size: 25, color: Colors.blue.shade100),
-                    ),
-                    Positioned(
-                      top: 20,
-                      left: 100,
-                      child: Icon(Icons.star_border,
-                          size: 20, color: Colors.cyan.shade200),
-                    ),
-                    Positioned(
-                      top: 25,
-                      right: 80,
-                      child: Icon(Icons.star,
-                          size: 18, color: Colors.pink.shade300),
-                    ),
-                    Positioned(
-                      bottom: 50,
-                      left: 100,
-                      child: Icon(Icons.star,
-                          size: 30, color: Colors.pink.shade300),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.all(40),
-                      child: Text(
-                        'Great Job !\nYou have completed\nall your self care\ntasks this week !',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // 🎚️ Interactive Progress Bars
+              _buildInteractiveBar('Energy Levels', energy, (v) {
+                setState(() => energy = v);
+              }),
+              _buildInteractiveBar('Satisfaction', satisfaction, (v) {
+                setState(() => satisfaction = v);
+              }),
+              _buildInteractiveBar('Happiness', happiness, (v) {
+                setState(() => happiness = v);
+              }),
+              _buildInteractiveBar('Proud of my achievements', proud, (v) {
+                setState(() => proud = v);
+              }),
+              _buildInteractiveBar('How busy you felt?', busy, (v) {
+                setState(() => busy = v);
+              }),
 
               const SizedBox(height: 30),
-
-              // Achievement Ribbons
-              _buildAchievementRibbon(),
-              _buildAchievementRibbon(),
-
-              const Spacer(),
-              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -142,37 +98,55 @@ class ContentPage4 extends StatelessWidget {
     );
   }
 
-  Widget _buildAchievementRibbon() {
+  // 🧱 Reusable widget for each feedback slider
+  Widget _buildInteractiveBar(
+      String label, double value, ValueChanged<double> onChanged) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color.fromRGBO(128, 128, 128, 0.2),
+            color: const Color.fromRGBO(128, 128, 128, 0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.emoji_events,
-            color: Colors.amber,
-            size: 40,
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.black,
+            ),
           ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Container(
-              height: 20,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(10),
-              ),
+          const SizedBox(height: 15), // ⬅️ Increased spacing between label & bar
+
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: Colors.lightGreen,
+              inactiveTrackColor: Colors.grey.shade200,
+              trackHeight: 8,
+              thumbShape:
+              const RoundSliderThumbShape(enabledThumbRadius: 0), // hide thumb
+              overlayShape:
+              const RoundSliderOverlayShape(overlayRadius: 0), // no overlay
+              thumbColor: Colors.transparent,
+              overlayColor: Colors.transparent,
+            ),
+            child: Slider(
+              value: value,
+              min: 0,
+              max: 100,
+              divisions: 100,
+              onChanged: onChanged,
             ),
           ),
         ],

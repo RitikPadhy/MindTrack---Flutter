@@ -26,7 +26,7 @@ class _MainViewState extends State<MainView> {
   void _setSystemNavBar() {
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
-        systemNavigationBarColor: Colors.grey[200], // light grey nav bar
+        systemNavigationBarColor: Colors.white, // light grey nav bar
         systemNavigationBarIconBrightness: Brightness.dark, // dark icons
         statusBarColor: Colors.transparent, // transparent top bar
         statusBarIconBrightness: Brightness.dark, // dark top icons
@@ -68,7 +68,7 @@ class _MainViewState extends State<MainView> {
         height: 56,
         selectedIndex: _currentPage,
         onDestinationSelected: _onItemTapped,
-        backgroundColor: Colors.grey[200],
+        backgroundColor: Colors.white,
         indicatorColor: Colors.lightBlue[100],
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
@@ -88,14 +88,14 @@ class _MainViewState extends State<MainView> {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined, size: 22),
-            selectedIcon: Icon(Icons.emoji_events, size: 22),
-            label: 'Goals',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.chat_bubble_outline, size: 22),
             selectedIcon: Icon(Icons.chat_bubble, size: 22),
             label: 'Feedback',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.emoji_events_outlined, size: 22),
+            selectedIcon: Icon(Icons.emoji_events, size: 22),
+            label: 'Goals',
           ),
         ],
       ),
