@@ -27,7 +27,7 @@ class ContentPage1 extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade900,
+                  color: const Color(0xFF9FE2BF),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
@@ -95,7 +95,7 @@ class ContentPage1 extends StatelessWidget {
                 child: Icon(
                   icon,
                   size: 40,
-                  color: Colors.black,
+                  color: Colors.black54,
                 ),
               ),
             if (showIcon) const SizedBox(width: 20),
@@ -105,6 +105,7 @@ class ContentPage1 extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
+                  color: Color(0xA6000000),
                 ),
               ),
             ),
@@ -166,6 +167,7 @@ class ContentPage1 extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w400, // lighter font weight
+                        color: Colors.black54,
                       ),
                     ),
                   ),

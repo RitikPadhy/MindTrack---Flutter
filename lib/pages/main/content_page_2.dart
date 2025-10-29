@@ -19,7 +19,7 @@ class ContentPage2 extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade900,
+                  color: const Color(0xFF9FE2BF),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
@@ -76,7 +76,7 @@ class ContentPage2 extends StatelessWidget {
                     ),
                   ],
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.green.shade100),
+                  border: Border.all(color: const Color(0xFFFFFDE7)),
                 ),
                 child: const Text(
                   'You have spent more time on productive tasks than usual',
@@ -84,6 +84,7 @@ class ContentPage2 extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
+                    color: Color(0xA6000000),
                   ),
                 ),
               ),
@@ -101,8 +102,8 @@ class ContentPage2 extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
       decoration: BoxDecoration(
-        color: isSelected ? Colors.green.shade900 : Colors.white,
-        border: Border.all(color: Colors.green.shade100),
+        color: isSelected ? const Color(0xFFFFFDE7) : Colors.white,
+        border: Border.all(color: const Color(0xFFFFFDE7)),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -117,7 +118,7 @@ class ContentPage2 extends StatelessWidget {
         text,
         style: TextStyle(
           fontWeight: FontWeight.bold,
-          color: isSelected ? Colors.white : Colors.black54,
+          color: isSelected ? Colors.black54 : Colors.black54,
         ),
       ),
     );
@@ -136,14 +137,13 @@ class ContentPage2 extends StatelessWidget {
     final values = [12.5, 44.4, 16.7, 13.7, 12.4];
 
     // Color range: from light green → deeper green
-    const startColor = Color(0xFF6BBF7A); // medium-dark green
-    const endColor = Color(0xFF3E8E41);   // slightly lighter than 0xFF2E7D32
+    const startColor = Color(0xFFCCF5E1); // pale mint-green
+    const endColor   = Color(0xFFFFE6A7); // soft golden-cream
 
     Color interpolateColor(double t) {
-      // Linear interpolation between start and end colors
-      int r = (startColor.r + (endColor.r - startColor.r) * t).round();
-      int g = (startColor.g + (endColor.g - startColor.g) * t).round();
-      int b = (startColor.b + (endColor.b - startColor.b) * t).round();
+      int r = (((startColor.r * 255.0) + ((endColor.r * 255.0) - (startColor.r * 255.0)) * t).round()) & 0xff;
+      int g = (((startColor.g * 255.0) + ((endColor.g * 255.0) - (startColor.g * 255.0)) * t).round()) & 0xff;
+      int b = (((startColor.b * 255.0) + ((endColor.b * 255.0) - (startColor.b * 255.0)) * t).round()) & 0xff;
       return Color.fromRGBO(r, g, b, 1);
     }
 
@@ -160,7 +160,7 @@ class ContentPage2 extends StatelessWidget {
         titleStyle: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: Colors.black54,
         ),
       );
     });

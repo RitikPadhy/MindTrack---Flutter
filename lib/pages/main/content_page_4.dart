@@ -37,7 +37,7 @@ class _ContentPage4State extends State<ContentPage4> {
       backgroundColor: Colors.grey.shade50,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -46,7 +46,7 @@ class _ContentPage4State extends State<ContentPage4> {
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade900,
+                  color: const Color(0xFF9FE2BF),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
@@ -68,6 +68,7 @@ class _ContentPage4State extends State<ContentPage4> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: Color(0xA6000000),
                 ),
               ),
 
@@ -124,7 +125,7 @@ class _ContentPage4State extends State<ContentPage4> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.black,
+              color: Color(0xA6000000),
             ),
           ),
           const SizedBox(height: 15), // ⬅️ Increased spacing between label & bar

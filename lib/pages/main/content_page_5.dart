@@ -18,7 +18,7 @@ class ContentPage5 extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade900,
+                  color: const Color(0xFF9FE2BF),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
@@ -56,6 +56,7 @@ class ContentPage5 extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
+                    color: Color(0xA6000000),
                   ),
                 ),
               ),
@@ -168,6 +169,7 @@ class ContentPage5 extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
+                color: Color(0xA6000000),
               ),
             ),
           ),
