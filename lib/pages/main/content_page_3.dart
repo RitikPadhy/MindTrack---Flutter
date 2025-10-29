@@ -137,7 +137,7 @@ class ContentPage3State extends State<ContentPage3> {
             // Header
             Container(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              color: Colors.green.shade900,
+              color: const Color(0xFF9FE2BF),
               child: const Center(
                 child: Text(
                   'Daily Schedule',
