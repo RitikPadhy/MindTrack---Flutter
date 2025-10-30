@@ -128,26 +128,42 @@ class _ContentPage4State extends State<ContentPage4> {
               color: Color(0xA6000000),
             ),
           ),
-          const SizedBox(height: 15), // ⬅️ Increased spacing between label & bar
+          const SizedBox(height: 15),
 
           SliderTheme(
             data: SliderThemeData(
               activeTrackColor: Colors.lightGreen,
               inactiveTrackColor: Colors.grey.shade200,
               trackHeight: 8,
-              thumbShape:
-              const RoundSliderThumbShape(enabledThumbRadius: 0), // hide thumb
-              overlayShape:
-              const RoundSliderOverlayShape(overlayRadius: 0), // no overlay
-              thumbColor: Colors.transparent,
-              overlayColor: Colors.transparent,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
+              thumbColor: Colors.lightGreen,
+              overlayColor: Colors.lightGreen.withOpacity(0.2),
+
+              // 🚫 Disable the floating value label
+              showValueIndicator: ShowValueIndicator.never,
             ),
             child: Slider(
               value: value,
               min: 0,
               max: 100,
-              divisions: 100,
+              divisions: 5, // 0–5 steps
               onChanged: onChanged,
+            ),
+          ),
+
+          // ✅ Number labels below slider (0–5)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(
+                6,
+                    (i) => Text(
+                  '$i',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
             ),
           ),
         ],

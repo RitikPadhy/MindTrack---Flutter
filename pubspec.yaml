@@ -34,3 +34,6 @@ flutter:
   assets:
     - assets/images/
     - assets/icon/
+    - assets/tasks/
+    - assets/tasks/man/
+    - assets/tasks/woman/

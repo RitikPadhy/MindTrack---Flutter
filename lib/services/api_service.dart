@@ -12,7 +12,8 @@ class ApiService {
     required String uid,
     required String email,
     required String password,
-    String role = "user",
+    required String gender,
+    String role = "Patient",
   }) async {
     final url = Uri.parse("$baseUrl/auth/signup");
     final resp = await http.post(
@@ -23,6 +24,7 @@ class ApiService {
         "email": email,
         "password": password,
         "role": role,
+        "gender": gender,
       }),
     );
 

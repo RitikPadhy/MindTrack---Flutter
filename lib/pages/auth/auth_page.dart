@@ -20,6 +20,8 @@ class _AuthPageState extends State<AuthPage> {
   bool _isLogin = true;
   bool _loading = false;
 
+  String? _selectedGender;
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +45,12 @@ class _AuthPageState extends State<AuthPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final uid = _userIdController.text.trim();
+
+    if (!_isLogin && _selectedGender == null) {
+      _showMessage("Please select your gender.");
+      setState(() => _loading = false);
+      return;
+    }
 
     setState(() => _loading = true);
 
@@ -70,7 +78,12 @@ class _AuthPageState extends State<AuthPage> {
           MaterialPageRoute(builder: (context) => const MainView()),
         );
       } else {
-        await _api.signup(uid: uid, email: email, password: password);
+        await _api.signup(
+          uid: uid,
+          email: email,
+          password: password,
+          gender: _selectedGender ?? "Other",
+        );
 
         if (!mounted) return;
         setState(() {
@@ -109,6 +122,40 @@ class _AuthPageState extends State<AuthPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (!_isLogin) ...[
+                    // Gender Dropdown Field (Vertical Alignment Fixed, Dropdown BG White)
+                    Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha((0.9 * 255).round()),
+                        borderRadius: BorderRadius.circular(6.0),
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedGender,
+                        dropdownColor: Colors.white,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          prefixIcon: Icon(Icons.person, size: 14),
+                          // Adjusted to push content up for better vertical centering
+                          contentPadding:
+                          EdgeInsets.fromLTRB(8, 4, 8, 12),
+                          hintText: 'Select Gender',
+                          hintStyle: TextStyle(fontSize: 12),
+                        ),
+                        isDense: true,
+                        style: const TextStyle(fontSize: 12, color: Colors.black),
+                        items: ['Male', 'Female', 'Other']
+                            .map((gender) => DropdownMenuItem<String>(
+                          value: gender,
+                          child: Text(gender),
+                        ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() => _selectedGender = value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // User ID / Username Field
                     Container(
                       height: 40,
                       decoration: BoxDecoration(
@@ -119,17 +166,19 @@ class _AuthPageState extends State<AuthPage> {
                         controller: _userIdController,
                         style: const TextStyle(fontSize: 12),
                         decoration: const InputDecoration(
-                          hintText: 'User ID',
+                          hintText: 'Username (User ID)',
                           hintStyle: TextStyle(fontSize: 12),
-                          prefixIcon: Icon(Icons.person_outline, size: 14),
+                          prefixIcon: Icon(Icons.badge, size: 14),
                           border: InputBorder.none,
                           contentPadding:
                           EdgeInsets.symmetric(vertical: 7, horizontal: 8),
                         ),
+                        keyboardType: TextInputType.text,
                       ),
                     ),
                     const SizedBox(height: 12),
                   ],
+                  // Email Field
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
@@ -151,6 +200,7 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  // Password Field
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
@@ -172,6 +222,7 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                   const SizedBox(height: 18),
+                  // Sign In / Create Account Button
                   ElevatedButton(
                     onPressed: _loading ? null : _handleAuth,
                     style: ElevatedButton.styleFrom(
@@ -200,6 +251,7 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                   const SizedBox(height: 6),
+                  // Toggle Button
                   TextButton(
                     onPressed: _loading
                         ? null

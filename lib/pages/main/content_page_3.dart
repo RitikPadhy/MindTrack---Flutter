@@ -13,25 +13,58 @@ class ContentPage3State extends State<ContentPage3> {
   DateTime _currentDate = DateTime.now();
   DateTime _selectedDay = DateTime.now();
 
-  // Track which hour box is active and which sub-boxes are selected
-  int? _activeHourBox; // only one active at a time
-  final Map<int, Set<int>> _checkedBoxes = {}; // store multiple boxes per hour
+  // Track which hour block is active
+  int? _activeHourBox;
+  final Map<String, bool> _checkedState = {}; // ✅ each box unique per hour-task-box
 
-  void _handleBoxSelected(int scheduleIndex, int boxIndex) {
+  // ✅ Updated JSON-like data
+  final List<Map<String, dynamic>> scheduleData = [
+    {"tasks": ["Prayer"]},
+    {"tasks": ["Exercise", "Read newspapers"]},
+    {"tasks": ["Fresh Up", "Breakfast"]},
+    {"tasks": ["Class and Clinics"]},
+    {"tasks": ["Class and Clinics"]},
+    {"tasks": ["Class and Clinics"]},
+    {"tasks": ["Lunch and Prayer"]},
+    {"tasks": ["Class"]},
+    {"tasks": ["Class"]},
+    {"tasks": ["Fresh Up and Prayer"]},
+    {"tasks": ["Watch Series"]},
+    {"tasks": ["Study"]},
+    {"tasks": ["Dinner"]},
+    {"tasks": ["Call Parents"]},
+    {"tasks": ["Prayer or Relax"]},
+    {"tasks": ["Sleep"]},
+  ];
+
+  final List<String> times = [
+    "6:00 AM - 7:00 AM",
+    "7:00 AM - 8:00 AM",
+    "8:00 AM - 9:00 AM",
+    "9:00 AM - 10:00 AM",
+    "10:00 AM - 11:00 AM",
+    "11:00 AM - 12:00 PM",
+    "12:00 PM - 1:00 PM",
+    "1:00 PM - 2:00 PM",
+    "2:00 PM - 3:00 PM",
+    "3:00 PM - 4:00 PM",
+    "4:00 PM - 5:00 PM",
+    "5:00 PM - 6:00 PM",
+    "6:00 PM - 7:00 PM",
+    "7:00 PM - 8:00 PM",
+    "8:00 PM - 9:00 PM",
+    "9:00 PM - 10:00 PM",
+  ];
+
+  void _handleBoxSelected(int scheduleIndex, int taskIndex, int boxIndex) {
     setState(() {
-      // make this schedule item active
       _activeHourBox = scheduleIndex;
-
-      // toggle the tapped box
-      final currentSet = _checkedBoxes[scheduleIndex] ?? <int>{};
-      if (currentSet.contains(boxIndex)) {
-        currentSet.remove(boxIndex);
-      } else {
-        currentSet.add(boxIndex);
-      }
-      _checkedBoxes[scheduleIndex] = currentSet;
+      final key = "$scheduleIndex-$taskIndex-$boxIndex";
+      _checkedState[key] = !(_checkedState[key] ?? false);
     });
   }
+
+  // ------------------ Date Navigation ------------------
 
   void _previousMonth() {
     setState(() {
@@ -49,8 +82,9 @@ class ContentPage3State extends State<ContentPage3> {
 
   void _previousDay() {
     setState(() {
-      if (_selectedDay.day > 1) {
-        _selectedDay = _selectedDay.subtract(const Duration(days: 1));
+      _selectedDay = _selectedDay.subtract(const Duration(days: 1));
+      if (_selectedDay.month != _currentDate.month) {
+        _currentDate = _selectedDay;
       }
     });
   }
@@ -124,6 +158,7 @@ class ContentPage3State extends State<ContentPage3> {
     );
   }
 
+  // ------------------ Build UI ------------------
   @override
   Widget build(BuildContext context) {
     final String monthYear = DateFormat('MMMM, yyyy').format(_currentDate).toUpperCase();
@@ -173,40 +208,28 @@ class ContentPage3State extends State<ContentPage3> {
               ),
             ),
 
-            // Week Days
-            Container(
-              color: Colors.white,
-              child: _buildDayWidgets(),
-            ),
+            // Weekday Bar
+            Container(color: Colors.white, child: _buildDayWidgets()),
 
             const Divider(height: 1),
 
-            // Scrollable Schedule Section
+            // Schedule List
             Expanded(
-              child: ListView(
+              child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                children: [
-                  for (int i = 0; i < 5; i++)
-                    ScheduleItem(
-                      time: [
-                        "10 AM - 11 AM",
-                        "11 AM - 12 PM",
-                        "12 PM - 1 PM",
-                        "2 PM - 3 PM",
-                        "3 PM - 4 PM"
-                      ][i],
-                      title: [
-                        "Self Care",
-                        "Cleaning the house",
-                        "Cooking Lunch",
-                        "Playing",
-                        "Sleeping"
-                      ][i],
-                      checkedBoxes: _checkedBoxes[i] ?? <int>{},
-                      isActive: _activeHourBox == i,
-                      onBoxSelected: (index) => _handleBoxSelected(i, index),
-                    ),
-                ],
+                itemCount: scheduleData.length,
+                itemBuilder: (context, i) {
+                  final taskList = List<String>.from(scheduleData[i]["tasks"]);
+                  return ScheduleItem(
+                    time: times[i],
+                    tasks: taskList,
+                    isActive: _activeHourBox == i,
+                    onBoxSelected: (taskIdx, boxIdx) =>
+                        _handleBoxSelected(i, taskIdx, boxIdx),
+                    checkedState: _checkedState,
+                    scheduleIndex: i,
+                  );
+                },
               ),
             ),
           ],
