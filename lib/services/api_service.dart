@@ -58,29 +58,85 @@ class ApiService {
 
     final data = jsonDecode(resp.body);
 
-    // Store access token
-    final token = data['access_token'] ?? data['idToken'] ?? data['token'];
-    if (token != null) {
-      await _storage.write(key: 'access_token', value: token);
-    }
-
-    // Store refresh token
-    final refreshToken = data['refresh_token'];
-    if (refreshToken != null) {
-      await _storage.write(key: 'refresh_token', value: refreshToken);
-    }
+    // Store access + refresh tokens
+    await _storage.write(key: 'access_token', value: data['access_token']);
+    await _storage.write(key: 'refresh_token', value: data['refresh_token']);
+    await _storage.write(key: 'uid', value: data['uid']);
+    await _storage.write(
+        key: 'token_expiry',
+        value: (DateTime.now()
+            .add(Duration(seconds: int.parse(data['expires_in'] ?? "3600")))
+            .millisecondsSinceEpoch)
+            .toString());
 
     return data;
   }
 
-  // ---------- Helper: Auth Headers ----------
+  // ---------- Auto Login Logic ----------
+  Future<bool> tryAutoLogin() async {
+    final accessToken = await _storage.read(key: 'access_token');
+    final refreshToken = await _storage.read(key: 'refresh_token');
+    final expiryStr = await _storage.read(key: 'token_expiry');
+
+    if (accessToken == null || refreshToken == null || expiryStr == null) {
+      return false; // No session saved
+    }
+
+    final expiry =
+    DateTime.fromMillisecondsSinceEpoch(int.tryParse(expiryStr) ?? 0);
+
+    if (DateTime.now().isBefore(expiry)) {
+      // Token still valid
+      return true;
+    } else {
+      // Expired -> try refreshing
+      try {
+        await _refreshToken(refreshToken);
+        return true;
+      } catch (_) {
+        await logout(await _storage.read(key: 'uid') ?? '');
+        return false;
+      }
+    }
+  }
+
+  // ---------- Refresh Token ----------
+  Future<void> _refreshToken(String refreshToken) async {
+    final url = Uri.parse("$baseUrl/auth/refresh-token");
+    final resp = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"refresh_token": refreshToken}),
+    );
+
+    if (resp.statusCode != 200) {
+      throw Exception("Token refresh failed");
+    }
+
+    final data = jsonDecode(resp.body);
+
+    await _storage.write(key: 'access_token', value: data['access_token']);
+    await _storage.write(key: 'refresh_token', value: data['refresh_token']);
+    await _storage.write(
+        key: 'token_expiry',
+        value: (DateTime.now()
+            .add(Duration(seconds: int.parse(data['expires_in'] ?? "3600")))
+            .millisecondsSinceEpoch)
+            .toString());
+  }
+
+  // ---------- Auth Headers ----------
   Future<Map<String, String>> _authHeaders() async {
     String? token = await _storage.read(key: 'access_token');
     if (token == null) {
-      // Optionally refresh token if null
-      token = await _storage.read(key: 'access_token');
-      if (token == null) throw Exception("No access token found");
+      final refreshToken = await _storage.read(key: 'refresh_token');
+      if (refreshToken != null) {
+        await _refreshToken(refreshToken);
+        token = await _storage.read(key: 'access_token');
+      }
     }
+
+    if (token == null) throw Exception("Not authenticated");
 
     return {
       "Content-Type": "application/json",

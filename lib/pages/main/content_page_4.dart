@@ -24,14 +24,7 @@ class _ContentPage4State extends State<ContentPage4> {
     DateTime sunday = monday.add(const Duration(days: 6));
 
     // 📅 Format with full month names
-    String weekRange;
-    if (monday.month == sunday.month) {
-      weekRange =
-      '${DateFormat('d').format(monday)} – ${DateFormat('d MMMM').format(sunday)}';
-    } else {
-      weekRange =
-      '${DateFormat('d MMMM').format(monday)} – ${DateFormat('d MMMM').format(sunday)}';
-    }
+    String weekRange = '${DateFormat('d MMMM').format(monday)} – ${DateFormat('d MMMM').format(sunday)}';
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
