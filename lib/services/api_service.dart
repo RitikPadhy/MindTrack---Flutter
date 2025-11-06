@@ -2,10 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiService {
   final String baseUrl = "https://api.mindtrack.shop";
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  // Key for storing the user's tasks/schedule data
+  static const String scheduleStorageKey = 'user_schedule_data';
 
   // ---------- Signup ----------
   Future<Map<String, dynamic>> signup({
@@ -58,16 +62,12 @@ class ApiService {
 
     final data = jsonDecode(resp.body);
 
-    // Store access + refresh tokens
+    // Store access + refresh tokens (using flutter_secure_storage)
     await _storage.write(key: 'access_token', value: data['access_token']);
     await _storage.write(key: 'refresh_token', value: data['refresh_token']);
-    await _storage.write(key: 'uid', value: data['uid']);
-    await _storage.write(
-        key: 'token_expiry',
-        value: (DateTime.now()
-            .add(Duration(seconds: int.parse(data['expires_in'] ?? "3600")))
-            .millisecondsSinceEpoch)
-            .toString());
+    // ... other storage logic ...
+
+    debugPrint('DEBUG: Token saved. Access Token length: ${data['access_token'].length}');
 
     return data;
   }
@@ -94,7 +94,7 @@ class ApiService {
         await _refreshToken(refreshToken);
         return true;
       } catch (_) {
-        await logout(await _storage.read(key: 'uid') ?? '');
+        // You should not call logout here as it requires a token/uid which might be missing/invalid
         return false;
       }
     }
@@ -125,18 +125,35 @@ class ApiService {
             .toString());
   }
 
-  // ---------- Auth Headers ----------
+  // ---------- Auth Headers (Includes Refresh Logic) ----------
   Future<Map<String, String>> _authHeaders() async {
+    debugPrint('DEBUG: Attempting to retrieve access token...');
     String? token = await _storage.read(key: 'access_token');
+
+    // 1. If access token is missing, try to refresh using the refresh token
     if (token == null) {
+      debugPrint('DEBUG: Access token is NULL. Checking for refresh token.');
       final refreshToken = await _storage.read(key: 'refresh_token');
       if (refreshToken != null) {
-        await _refreshToken(refreshToken);
-        token = await _storage.read(key: 'access_token');
+        debugPrint('DEBUG: Refresh token found. Attempting refresh...');
+        try {
+          await _refreshToken(refreshToken);
+          token = await _storage.read(key: 'access_token');
+          debugPrint('DEBUG: Token refreshed successfully. New token length: ${token?.length}');
+        } catch (e) {
+          debugPrint('DEBUG ERROR: Token refresh failed: $e');
+          // Refresh failed, token remains null
+        }
       }
     }
 
-    if (token == null) throw Exception("Not authenticated");
+    // 2. If token is still null after checking/refreshing, throw exception
+    if (token == null) {
+      debugPrint('DEBUG ERROR: Final token is NULL. Throwing "Not authenticated."');
+      throw Exception("Not authenticated. Access token not available.");
+    }
+
+    debugPrint('DEBUG: Auth Headers successfully created. Token length: ${token.length}');
 
     return {
       "Content-Type": "application/json",
@@ -156,13 +173,17 @@ class ApiService {
       throw Exception(error);
     }
 
+    final data = jsonDecode(resp.body); // Make sure 'gender' is in this map
+    await _storage.write(key: 'gender', value: data['gender']);
+
     return jsonDecode(resp.body);
   }
 
   // ---------- Logout ----------
   Future<void> logout(String uid) async {
     final url = Uri.parse("$baseUrl/auth/logout");
-    final headers = await _authHeaders();
+    // We try to get headers, but proceed even if token is missing (for cleanup)
+    final headers = await _authHeaders().catchError((_) => {"Content-Type": "application/json"});
 
     final resp = await http.post(
       url,
@@ -172,11 +193,15 @@ class ApiService {
 
     if (resp.statusCode != 200) {
       final error = _safeError(resp.body, "Logout failed");
-      throw Exception(error);
+      // Don't throw exception on failed logout if we can still clear local tokens
+      // throw Exception(error);
     }
 
+    // Always clear local tokens on logout attempt
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
+    await _storage.delete(key: 'uid');
+    await _storage.delete(key: 'token_expiry');
   }
 
   // ---------- Get Reading Material ----------
@@ -189,6 +214,51 @@ class ApiService {
     }
 
     return jsonDecode(resp.body);
+  }
+
+  // NEW METHOD to fetch historical or future day routine and tasks
+  Future<Map<String, dynamic>> getDayRoutine(String date) async {
+    final url = Uri.parse("$baseUrl/routines/get-day-routine?date=$date");
+    final headers = await _authHeaders(); // Needs valid token
+
+    final resp = await http.get(url, headers: headers);
+
+    if (resp.statusCode == 200) {
+      return jsonDecode(resp.body);
+    } else if (resp.statusCode == 404) {
+      final error = _safeError(resp.body, "No routine found for date $date");
+      throw Exception(error);
+    } else {
+      final error = _safeError(resp.body, "Failed to fetch routine for date $date");
+      throw Exception(error);
+    }
+  }
+
+  // 🚩 NEW METHOD: Saves the local checkbox state (i-j-k) after conversion to granular HH:MM slots
+  Future<void> saveDayCompletionGranular({
+    required String date,
+    required Map<String, Map<String, bool>> hourSlotsStatus,
+  }) async {
+    final url = Uri.parse("$baseUrl/routines/save-day");
+    final headers = await _authHeaders(); // Needs valid token
+
+    final payload = {
+      "date": date,
+      "hour_slots_status": hourSlotsStatus,
+    };
+
+    debugPrint("DEBUG: Sending granular completion for $date");
+
+    final resp = await http.post(
+      url,
+      headers: headers,
+      body: jsonEncode(payload),
+    );
+
+    if (resp.statusCode != 200) {
+      final error = _safeError(resp.body, "Failed to save granular day completion for $date");
+      throw Exception(error);
+    }
   }
 
   // ---------- DNS Check ----------

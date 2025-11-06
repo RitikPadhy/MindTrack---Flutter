@@ -15,6 +15,7 @@ dependencies:
   intl: ^0.18.1
   cupertino_icons: ^1.0.8
   fl_chart: ^0.68.0
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   flutter_test:
@@ -35,5 +36,5 @@ flutter:
     - assets/images/
     - assets/icon/
     - assets/tasks/
-    - assets/tasks/man/
-    - assets/tasks/woman/
+    - assets/tasks/female/
+    - assets/tasks/male/

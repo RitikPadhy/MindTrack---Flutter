@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:convert'; // For jsonEncode
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mind_track/pages/main/main_view.dart';
 import '../../services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // For local data storage
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -71,7 +73,20 @@ class _AuthPageState extends State<AuthPage> {
       // ---------- Login / Signup ----------
       if (_isLogin) {
         await _api.login(email: email, password: password);
-        await _api.getProfile();
+
+        // ✅ 1. Call API to get profile which includes the dynamic 'tasks' array
+        final profileData = await _api.getProfile();
+
+        // ✅ 2. Extract the tasks array and cast it
+        final List<Map<String, dynamic>> fetchedTasks =
+        (profileData['tasks'] as List).cast<Map<String, dynamic>>();
+
+        // ✅ 3. Save the tasks array locally using shared_preferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+            ApiService.scheduleStorageKey,
+            jsonEncode(fetchedTasks) // Convert List<Map> to JSON string for saving
+        );
 
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
