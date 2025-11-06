@@ -248,7 +248,7 @@ class _ContentPage2State extends State<ContentPage2> {
         value: values[i],
         title: titles[i],
         radius: 105,
-        titlePositionPercentageOffset: 0.55,
+        titlePositionPercentageOffset: 0.5,
         titleStyle: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
