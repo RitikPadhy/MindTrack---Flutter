@@ -2,8 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:mind_track/pages/auth/auth_page.dart';
 import 'package:mind_track/pages/main/main_view.dart';
 import 'package:mind_track/services/api_service.dart';
+import 'package:mind_track/services/notification_service.dart'; // Import the new service
 
-void main() {
+void main() async {
+  // Required to call native APIs before runApp()
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize the notification service and schedule the first random notification
+  await NotificationService().init();
+  NotificationService().scheduleRandomDailyNotification();
+
   runApp(const MyApp());
 }
 
@@ -28,6 +36,8 @@ class _MyAppState extends State<MyApp> {
     try {
       final isLoggedIn = await _api.tryAutoLogin();
       if (isLoggedIn) {
+        // Reschedule the daily notification upon successful auto-login/app startup
+        NotificationService().scheduleRandomDailyNotification();
         setState(() => _home = const MainView());
       } else {
         setState(() => _home = const AuthPage());

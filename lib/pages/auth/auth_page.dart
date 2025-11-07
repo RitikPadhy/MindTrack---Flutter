@@ -1,10 +1,11 @@
+// auth_page.dart (Modified)
 import 'dart:io';
-import 'dart:convert'; // For jsonEncode
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mind_track/pages/main/main_view.dart';
 import '../../services/api_service.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // For local data storage
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -15,14 +16,14 @@ class AuthPage extends StatefulWidget {
 
 class _AuthPageState extends State<AuthPage> {
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _userIdController = TextEditingController();
+  final TextEditingController _oldPasswordController = TextEditingController(); // Renamed from _passwordController
+  final TextEditingController _newPasswordController = TextEditingController(); // Replaces _userIdController
   final ApiService _api = ApiService();
 
   bool _isLogin = true;
   bool _loading = false;
 
-  String? _selectedGender;
+  // Removed: String? _selectedGender;
 
   @override
   void initState() {
@@ -45,14 +46,22 @@ class _AuthPageState extends State<AuthPage> {
 
   Future<void> _handleAuth() async {
     final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final uid = _userIdController.text.trim();
+    final oldPassword = _oldPasswordController.text.trim(); // Now old password
+    final newPassword = _newPasswordController.text.trim(); // Only for change password
 
-    if (!_isLogin && _selectedGender == null) {
-      _showMessage("Please select your gender.");
-      setState(() => _loading = false);
-      return;
+    // Check for empty fields based on mode
+    if (_isLogin) {
+      if (email.isEmpty || oldPassword.isEmpty) {
+        _showMessage("Please enter both email and password.");
+        return;
+      }
+    } else { // Change Password mode
+      if (email.isEmpty || oldPassword.isEmpty || newPassword.isEmpty) {
+        _showMessage("Please fill in all fields (Email, Old Password, New Password).");
+        return;
+      }
     }
+
 
     setState(() => _loading = true);
 
@@ -70,9 +79,10 @@ class _AuthPageState extends State<AuthPage> {
         return;
       }
 
-      // ---------- Login / Signup ----------
+      // ---------- Login / Change Password ----------
       if (_isLogin) {
-        await _api.login(email: email, password: password);
+        // --- LOGIN LOGIC (Remains the same) ---
+        await _api.login(email: email, password: oldPassword); // oldPassword is the current password
 
         // ✅ 1. Call API to get profile which includes the dynamic 'tasks' array
         final profileData = await _api.getProfile();
@@ -93,17 +103,21 @@ class _AuthPageState extends State<AuthPage> {
           MaterialPageRoute(builder: (context) => const MainView()),
         );
       } else {
-        await _api.signup(
-          uid: uid,
+        // --- CHANGE PASSWORD LOGIC (New) ---
+        await _api.changePassword(
           email: email,
-          password: password,
-          gender: _selectedGender ?? "Other",
+          oldPassword: oldPassword,
+          newPassword: newPassword,
         );
 
         if (!mounted) return;
+        _showMessage("Password changed successfully! Please log in with your new password.");
+        // Clear all fields and switch back to login mode after successful change
         setState(() {
           _isLogin = true;
-          _userIdController.clear();
+          _emailController.clear();
+          _oldPasswordController.clear();
+          _newPasswordController.clear();
         });
       }
     } catch (e) {
@@ -115,6 +129,9 @@ class _AuthPageState extends State<AuthPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine the label for the password field based on mode
+    final passwordHintText = _isLogin ? 'Password' : 'Old Password';
+
     return Scaffold(
       body: Stack(
         children: [
@@ -136,41 +153,8 @@ class _AuthPageState extends State<AuthPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // New Password Field (Replaces Gender/User ID field)
                   if (!_isLogin) ...[
-                    // Gender Dropdown Field (Vertical Alignment Fixed, Dropdown BG White)
-                    Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha((0.9 * 255).round()),
-                        borderRadius: BorderRadius.circular(6.0),
-                      ),
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedGender,
-                        dropdownColor: Colors.white,
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          prefixIcon: Icon(Icons.person, size: 14),
-                          // Adjusted to push content up for better vertical centering
-                          contentPadding:
-                          EdgeInsets.fromLTRB(8, 4, 8, 12),
-                          hintText: 'Select Gender',
-                          hintStyle: TextStyle(fontSize: 12),
-                        ),
-                        isDense: true,
-                        style: const TextStyle(fontSize: 12, color: Colors.black),
-                        items: ['Male', 'Female', 'Other']
-                            .map((gender) => DropdownMenuItem<String>(
-                          value: gender,
-                          child: Text(gender),
-                        ))
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() => _selectedGender = value);
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // User ID / Username Field
                     Container(
                       height: 40,
                       decoration: BoxDecoration(
@@ -178,17 +162,18 @@ class _AuthPageState extends State<AuthPage> {
                         borderRadius: BorderRadius.circular(6.0),
                       ),
                       child: TextFormField(
-                        controller: _userIdController,
+                        controller: _newPasswordController,
                         style: const TextStyle(fontSize: 12),
                         decoration: const InputDecoration(
-                          hintText: 'Username (User ID)',
+                          hintText: 'New Password',
                           hintStyle: TextStyle(fontSize: 12),
-                          prefixIcon: Icon(Icons.badge, size: 14),
+                          prefixIcon: Icon(Icons.lock_open, size: 14),
                           border: InputBorder.none,
                           contentPadding:
                           EdgeInsets.symmetric(vertical: 7, horizontal: 8),
                         ),
-                        keyboardType: TextInputType.text,
+                        keyboardType: TextInputType.visiblePassword,
+                        obscureText: true,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -215,7 +200,7 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Password Field
+                  // Old/Current Password Field
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
@@ -223,21 +208,21 @@ class _AuthPageState extends State<AuthPage> {
                       borderRadius: BorderRadius.circular(6.0),
                     ),
                     child: TextFormField(
-                      controller: _passwordController,
+                      controller: _oldPasswordController, // Now for old/current password
                       style: const TextStyle(fontSize: 12),
-                      decoration: const InputDecoration(
-                        hintText: 'Password',
-                        hintStyle: TextStyle(fontSize: 12),
-                        prefixIcon: Icon(Icons.lock_outline, size: 14),
+                      decoration: InputDecoration(
+                        hintText: passwordHintText,
+                        hintStyle: const TextStyle(fontSize: 12),
+                        prefixIcon: const Icon(Icons.lock_outline, size: 14),
                         border: InputBorder.none,
                         contentPadding:
-                        EdgeInsets.symmetric(vertical: 7, horizontal: 8),
+                        const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
                       ),
                       obscureText: true,
                     ),
                   ),
                   const SizedBox(height: 18),
-                  // Sign In / Create Account Button
+                  // Sign In / Change Password Button
                   ElevatedButton(
                     onPressed: _loading ? null : _handleAuth,
                     style: ElevatedButton.styleFrom(
@@ -258,7 +243,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                     )
                         : Text(
-                      _isLogin ? 'Sign In' : 'Create Account',
+                      _isLogin ? 'Sign In' : 'Set New Password',
                       style: const TextStyle(
                           fontSize: 14,
                           color: Colors.white,
@@ -273,13 +258,14 @@ class _AuthPageState extends State<AuthPage> {
                         : () {
                       setState(() {
                         _isLogin = !_isLogin;
-                        if (_isLogin) _userIdController.clear();
+                        // Clear New Password field when switching back to Login
+                        if (_isLogin) _newPasswordController.clear();
                       });
                     },
                     child: Text(
                       _isLogin
-                          ? 'Need an account? Sign Up'
-                          : 'Already have an account? Sign In',
+                          ? 'Forgot password? Change it now' // Updated prompt
+                          : 'Remembered password? Sign In', // Updated prompt
                       style: const TextStyle(
                           color: Colors.white70, fontSize: 11),
                     ),

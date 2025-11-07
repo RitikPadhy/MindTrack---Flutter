@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // ✅ for date formatting
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // ✅ NEW: Notification Import
+import '../../services/api_service.dart'; // Ensure this path is correct
+
+// Global instance for the plugin (common practice for simplicity)
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+FlutterLocalNotificationsPlugin();
 
 class ContentPage4 extends StatefulWidget {
   const ContentPage4({super.key});
@@ -10,21 +17,279 @@ class ContentPage4 extends StatefulWidget {
 
 class _ContentPage4State extends State<ContentPage4> {
   // 🎚️ Sliders’ state values (0–100)
-  double energy = 80;
-  double satisfaction = 60;
-  double happiness = 40;
-  double proud = 70;
-  double busy = 70;
+  double energy = 0;
+  double satisfaction = 0;
+  double happiness = 0;
+  double proud = 0;
+  double busy = 0;
+
+  // 🗓️ State & Storage Keys
+  DateTime? _createdAt;
+  late SharedPreferences _prefs;
+  final ApiService _api = ApiService();
+
+  static const String _createdAtStorageKey = 'user_created_at';
+  static const String _lastFeedbackSyncDateKey = 'last_feedback_sync_date';
+
+  // 🔑 Keys for the five slider values
+  static const String _energyKey = 'feedback_energy';
+  static const String _satisfactionKey = 'feedback_satisfaction';
+  static const String _happinessKey = 'feedback_happiness';
+  static const String _proudKey = 'feedback_proud';
+  static const String _busyKey = 'feedback_busy';
+
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeNotifications(); // ✅ NEW: Initialize notifications
+    _initPrefsAndLoad();
+  }
+
+  // --- Notification Initialization ---
+
+  Future<void> _initializeNotifications() async {
+    // Android setup: requires app icon name (e.g., 'app_icon')
+    const AndroidInitializationSettings initializationSettingsAndroid =
+    AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    // iOS setup: no specific settings needed here, but permissions must be requested elsewhere
+    const DarwinInitializationSettings initializationSettingsDarwin =
+    DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+
+    const InitializationSettings initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsDarwin);
+
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  // 🔔 NEW: Method to show the notification
+  Future<void> _showCompletionNotification(int weekNumber) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+    AndroidNotificationDetails(
+      'weekly_feedback_channel', // Channel ID
+      'Weekly Feedback Notifications', // Channel Name
+      channelDescription: 'Notifications for successful weekly feedback submissions.',
+      importance: Importance.high,
+      priority: Priority.high,
+      ticker: 'ticker',
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+    NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      0, // Notification ID
+      'Feedback Complete! 📝', // Title
+      'Thanks for your feedback! Your data for Week $weekNumber has been successfully saved and your new week has begun.', // Body
+      platformChannelSpecifics,
+      payload: 'feedback_synced',
+    );
+  }
+
+  // --- Core Initialization and Loading ---
+
+  Future<void> _initPrefsAndLoad() async {
+    _prefs = await SharedPreferences.getInstance();
+    await _loadCreatedAt();
+    await _checkAndSyncFeedback(); // CRITICAL: Check for rollover and sync before loading
+    await _loadSliderValues();
+    // After loading, force UI update to show correct week range
+    if(mounted) setState(() {});
+  }
+
+  // 🚀 Method to load the createdAt timestamp (omitted for brevity, no changes here)
+  Future<void> _loadCreatedAt() async {
+    final storedCreatedAtString = _prefs.getString(_createdAtStorageKey);
+    DateTime? loadedDate;
+
+    if (storedCreatedAtString != null) {
+      final timestamp = int.tryParse(storedCreatedAtString);
+
+      if (timestamp != null && timestamp > 0) {
+        final fullDate = DateTime.fromMillisecondsSinceEpoch(timestamp);
+        // Normalize loaded date to the start of the day (00:00:00)
+        loadedDate = DateTime(fullDate.year, fullDate.month, fullDate.day);
+      }
+    }
+    _createdAt = loadedDate;
+  }
+
+  // 💾 Method to load slider values from SharedPreferences (omitted for brevity, no changes here)
+  Future<void> _loadSliderValues() async {
+    final double loadedEnergy = _prefs.getDouble(_energyKey) ?? 0.0;
+    final double loadedSatisfaction = _prefs.getDouble(_satisfactionKey) ?? 0.0;
+    final double loadedHappiness = _prefs.getDouble(_happinessKey) ?? 0.0;
+    final double loadedProud = _prefs.getDouble(_proudKey) ?? 0.0;
+    final double loadedBusy = _prefs.getDouble(_busyKey) ?? 0.0;
+
+    if (mounted) {
+      setState(() {
+        energy = loadedEnergy;
+        satisfaction = loadedSatisfaction;
+        happiness = loadedHappiness;
+        proud = loadedProud;
+        busy = loadedBusy;
+      });
+    }
+  }
+
+  // 📝 Method to save a single slider value (omitted for brevity, no changes here)
+  Future<void> _saveSliderValue(String key, double value) async {
+    await _prefs.setDouble(key, value);
+  }
+
+  // --- Weekly Sync and Reset Logic ---
+
+  int _calculateWeekNumber(DateTime startDate) {
+    final DateTime today = DateTime.now();
+    final DateTime startOfDayToday = DateTime(today.year, today.month, today.day);
+
+    final int daysSinceStart = startOfDayToday.difference(startDate).inDays;
+
+    final int weekIndex = (daysSinceStart / 7).floor();
+
+    return (weekIndex % 4) + 1;
+  }
+
+  DateTime _calculateNextResetTime(DateTime startDate) {
+    final DateTime today = DateTime.now();
+    final DateTime startOfToday = DateTime(today.year, today.month, today.day);
+
+    final int daysSinceStart = startOfToday.difference(startDate).inDays;
+
+    final int currentWeekIndex = (daysSinceStart / 7).floor();
+
+    final DateTime nextWeekStartDate = startDate.add(Duration(days: (currentWeekIndex + 1) * 7));
+
+    return nextWeekStartDate;
+  }
+
+  // CRITICAL: Checks if the week has ended and performs sync/reset
+  Future<void> _checkAndSyncFeedback() async {
+    if (_createdAt == null) return;
+
+    final DateTime nextResetTime = _calculateNextResetTime(_createdAt!);
+    final DateTime now = DateTime.now();
+
+    // Check if we have passed the weekly midnight reset time
+    if (now.isAfter(nextResetTime)) {
+
+      final DateTime lastWeekStartDate = _createdAt!.add(Duration(days: ((now.difference(_createdAt!).inDays / 7).floor() - 1) * 7));
+      final int weekNumberToSync = _calculateWeekNumber(lastWeekStartDate);
+
+      try {
+        // 1. CALL API (Save current slider values for the week that just ended)
+        await _api.updateWeeklyFeedback(
+          weekNumber: weekNumberToSync,
+          energyLevels: energy,
+          satisfaction: satisfaction,
+          happiness: happiness,
+          proudOfAchievements: proud,
+          howBusy: busy,
+        );
+
+        // 2. RESET LOCAL DATA
+        await _resetLocalFeedback();
+
+        // 3. Update sync date marker
+        await _prefs.setString(_lastFeedbackSyncDateKey, now.toIso8601String());
+
+        if (mounted) {
+          // Force a reload of the now-zeroed state and updated UI
+          await _loadSliderValues();
+
+          // 🔔 NEW: Show the local notification!
+          _showCompletionNotification(weekNumberToSync);
+
+          // Show in-app Snackbar as well
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Weekly feedback for Week $weekNumberToSync saved and reset.')),
+          );
+        }
+
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Warning: Failed to sync feedback: ${e.toString()}. Local data retained.')),
+          );
+        }
+      }
+    }
+  }
+
+  // 📝 Resets the 5 slider values back to 0 in SharedPreferences (omitted for brevity, no changes here)
+  Future<void> _resetLocalFeedback() async {
+    await _prefs.setDouble(_energyKey, 0.0);
+    await _prefs.setDouble(_satisfactionKey, 0.0);
+    await _prefs.setDouble(_happinessKey, 0.0);
+    await _prefs.setDouble(_proudKey, 0.0);
+    await _prefs.setDouble(_busyKey, 0.0);
+  }
+
+  // --- Slider Handlers (omitted for brevity, no changes here) ---
+
+  void _updateEnergy(double v) {
+    setState(() => energy = v);
+    _saveSliderValue(_energyKey, v);
+  }
+
+  void _updateSatisfaction(double v) {
+    setState(() => satisfaction = v);
+    _saveSliderValue(_satisfactionKey, v);
+  }
+
+  void _updateHappiness(double v) {
+    setState(() => happiness = v);
+    _saveSliderValue(_happinessKey, v);
+  }
+
+  void _updateProud(double v) {
+    setState(() => proud = v);
+    _saveSliderValue(_proudKey, v);
+  }
+
+  void _updateBusy(double v) {
+    setState(() => busy = v);
+    _saveSliderValue(_busyKey, v);
+  }
+
+  // --- Build Method (omitted for brevity, no changes here) ---
 
   @override
   Widget build(BuildContext context) {
-    // 🗓️ Get current week range (Monday → Sunday)
     DateTime now = DateTime.now();
-    DateTime monday = now.subtract(Duration(days: now.weekday - 1));
-    DateTime sunday = monday.add(const Duration(days: 6));
+    String weekRange;
+    String creationDate;
 
-    // 📅 Format with full month names
-    String weekRange = '${DateFormat('d MMMM').format(monday)} – ${DateFormat('d MMMM').format(sunday)}';
+    // 1. Calculate the week range based on _createdAt
+    if (_createdAt != null) {
+      final DateTime startDate = _createdAt!;
+
+      final DateTime today = DateTime(now.year, now.month, now.day);
+      final int daysSinceStart = today.difference(startDate).inDays;
+
+      final int currentWeekIndex = (daysSinceStart / 7).floor();
+
+      // The start and end dates for the current week block
+      final DateTime weekStartDate = startDate.add(Duration(days: currentWeekIndex * 7));
+      final DateTime weekEndDate = weekStartDate.add(const Duration(days: 6));
+
+      weekRange = '${DateFormat('d MMMM').format(weekStartDate)} – ${DateFormat('d MMMM').format(weekEndDate)}';
+
+      creationDate = 'Member Since: ${DateFormat('MMMM d, yyyy').format(_createdAt!)} | Week ${_calculateWeekNumber(startDate)}';
+
+
+    } else {
+      weekRange = 'Loading week range...';
+      creationDate = 'Loading member status...';
+    }
+
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -54,7 +319,19 @@ class _ContentPage4State extends State<ContentPage4> {
               ),
               const SizedBox(height: 24),
 
-              // Dynamic Week Range
+              // Creation Date Display
+              Text(
+                creationDate,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Dynamic Week Range (Calculated relative to _createdAt)
               Text(
                 weekRange,
                 textAlign: TextAlign.center,
@@ -68,21 +345,11 @@ class _ContentPage4State extends State<ContentPage4> {
               const SizedBox(height: 16),
 
               // 🎚️ Interactive Progress Bars
-              _buildInteractiveBar('Energy Levels', energy, (v) {
-                setState(() => energy = v);
-              }),
-              _buildInteractiveBar('Satisfaction', satisfaction, (v) {
-                setState(() => satisfaction = v);
-              }),
-              _buildInteractiveBar('Happiness', happiness, (v) {
-                setState(() => happiness = v);
-              }),
-              _buildInteractiveBar('Proud of my achievements', proud, (v) {
-                setState(() => proud = v);
-              }),
-              _buildInteractiveBar('How busy you felt?', busy, (v) {
-                setState(() => busy = v);
-              }),
+              _buildInteractiveBar('Energy Levels', energy, _updateEnergy),
+              _buildInteractiveBar('Satisfaction', satisfaction, _updateSatisfaction),
+              _buildInteractiveBar('Happiness', happiness, _updateHappiness),
+              _buildInteractiveBar('Proud of my achievements', proud, _updateProud),
+              _buildInteractiveBar('How busy you felt?', busy, _updateBusy),
 
               const SizedBox(height: 30),
             ],
@@ -131,7 +398,7 @@ class _ContentPage4State extends State<ContentPage4> {
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
               thumbColor: Colors.lightGreen,
-              overlayColor: Colors.lightGreen.withValues(alpha: 0.2),
+              overlayColor: Colors.lightGreen.withOpacity(0.2),
 
               // 🚫 Disable the floating value label
               showValueIndicator: ShowValueIndicator.never,

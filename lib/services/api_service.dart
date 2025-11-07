@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   final String baseUrl = "https://api.mindtrack.shop";
@@ -11,33 +12,28 @@ class ApiService {
   // Key for storing the user's tasks/schedule data
   static const String scheduleStorageKey = 'user_schedule_data';
 
-  // ---------- Signup ----------
-  Future<Map<String, dynamic>> signup({
-    required String uid,
+  // --- NEW: Change Password ---
+  Future<void> changePassword({
     required String email,
-    required String password,
-    required String gender,
-    String role = "Patient",
+    required String oldPassword,
+    required String newPassword,
   }) async {
-    final url = Uri.parse("$baseUrl/auth/signup");
+    final url = Uri.parse("$baseUrl/auth/change-password");
     final resp = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
-        "uid": uid,
         "email": email,
-        "password": password,
-        "role": role,
-        "gender": gender,
+        "old_password": oldPassword,
+        "new_password": newPassword,
       }),
     );
 
     if (resp.statusCode != 200) {
-      final error = _safeError(resp.body, "Sign up failed");
+      final error = _safeError(resp.body, "Failed to change password");
       throw Exception(error);
     }
-
-    return jsonDecode(resp.body);
+    // No data to return, just a success message
   }
 
   // ---------- Login ----------
@@ -173,10 +169,30 @@ class ApiService {
       throw Exception(error);
     }
 
-    final data = jsonDecode(resp.body); // Make sure 'gender' is in this map
-    await _storage.write(key: 'gender', value: data['gender']);
+    final data = jsonDecode(resp.body);
 
-    return jsonDecode(resp.body);
+    // Save 'gender' to secure storage (as per original code)
+    if (data.containsKey('gender')) {
+      await _storage.write(key: 'gender', value: data['gender']);
+    }
+
+    // New logic: Save 'createdAt' to SharedPreferences
+    if (data.containsKey('createdAt')) {
+      final prefs = await SharedPreferences.getInstance();
+      // Assuming 'createdAt' from API is an ISO string or similar, we convert it
+      // to a millisecond timestamp string for easy loading in ContentPage4.
+      try {
+        final createdAtDate = DateTime.parse(data['createdAt']);
+        await prefs.setString(
+            'user_created_at',
+            createdAtDate.millisecondsSinceEpoch.toString()
+        );
+      } catch (e) {
+        debugPrint('ERROR: Failed to parse and save createdAt date: $e');
+      }
+    }
+
+    return data;
   }
 
   // ---------- Logout ----------
@@ -259,6 +275,55 @@ class ApiService {
       final error = _safeError(resp.body, "Failed to save granular day completion for $date");
       throw Exception(error);
     }
+  }
+
+  // Week Feedback
+  Future<void> updateWeeklyFeedback({
+    required int weekNumber,
+    required double energyLevels,
+    required double satisfaction,
+    required double happiness,
+    required double proudOfAchievements,
+    required double howBusy,
+  }) async {
+    final url = Uri.parse("$baseUrl/weekly-feedback/update-week"); // Assuming the endpoint is /weekly-feedback/update-week
+    final headers = await _authHeaders();
+
+    final payload = {
+      "week_number": weekNumber,
+      "energy_levels": energyLevels,
+      "satisfaction": satisfaction,
+      "happiness": happiness,
+      "proud_of_achievements": proudOfAchievements,
+      "how_busy": howBusy,
+    };
+
+    final resp = await http.patch(
+      url,
+      headers: headers,
+      body: jsonEncode(payload),
+    );
+
+    if (resp.statusCode != 200) {
+      final error = _safeError(resp.body, "Failed to update weekly feedback for week $weekNumber");
+      throw Exception(error);
+    }
+  }
+
+  // 🏆 NEW METHOD: Fetch weekly achievement messages
+  Future<List<dynamic>> getWeeklyAchievements() async {
+    final url = Uri.parse("$baseUrl/messages"); // Endpoint: /messages
+    final headers = await _authHeaders();
+
+    final resp = await http.get(url, headers: headers);
+
+    if (resp.statusCode != 200) {
+      final error = _safeError(resp.body, "Failed to load weekly achievements");
+      throw Exception(error);
+    }
+
+    // The API returns a JSON array of achievement maps
+    return jsonDecode(resp.body);
   }
 
   // ---------- DNS Check ----------
