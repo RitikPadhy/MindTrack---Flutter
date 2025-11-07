@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:mind_track/widgets/schedule_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:flutter/foundation.dart'; // Import for debugPrint
 import '../../services/api_service.dart';
 
 class ContentPage3 extends StatefulWidget {
@@ -31,7 +30,6 @@ class ContentPage3State extends State<ContentPage3> {
 
   static const String _storageKey = 'checked_schedule_state';
   static const String _lastAccessDateKey = 'last_access_date';
-  static const String _genderStorageKey = 'user_gender'; // Key for stored gender
 
   String _getDateKey(DateTime date) {
     return DateFormat('yyyy-MM-dd').format(date);
@@ -99,7 +97,7 @@ class ContentPage3State extends State<ContentPage3> {
 
   // Main logic to decide data source (Local or API)
   Future<void> _loadDataForSelectedDay() async {
-    if (!mounted || _prefs == null) return;
+    if (!mounted) return;
 
     setState(() {
       _isLoading = true;

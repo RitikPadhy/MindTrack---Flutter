@@ -140,7 +140,7 @@ class _ContentPage5State extends State<ContentPage5> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.withOpacity(0.3),
+                        color: Colors.blue.withValues(alpha: 0.3),
                         blurRadius: 25,
                         spreadRadius: 5,
                       ),
@@ -175,7 +175,7 @@ class _ContentPage5State extends State<ContentPage5> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               height: 1.4,
                             ),
                           ),
@@ -194,7 +194,6 @@ class _ContentPage5State extends State<ContentPage5> {
                 final index = entry.key;
                 final achievement = entry.value;
 
-                // Skip the first message as it's used in the main circle
                 if (index == 0) return const SizedBox.shrink();
 
                 return _buildAchievementMessage(
@@ -202,7 +201,7 @@ class _ContentPage5State extends State<ContentPage5> {
                   title: achievement['title']!,
                   message: achievement['message2']!,
                 );
-              }).toList(),
+              }),
 
               // If less than 3 achievements (only the main one is shown in the list),
               // and we are not loading, show a static encouraging message.

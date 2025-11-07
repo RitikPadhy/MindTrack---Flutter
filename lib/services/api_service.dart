@@ -209,8 +209,7 @@ class ApiService {
 
     if (resp.statusCode != 200) {
       final error = _safeError(resp.body, "Logout failed");
-      // Don't throw exception on failed logout if we can still clear local tokens
-      // throw Exception(error);
+      debugPrint("Logout failed: $error");
     }
 
     // Always clear local tokens on logout attempt

@@ -200,14 +200,14 @@ class _ContentPage4State extends State<ContentPage4> {
         // 3. Update sync date marker
         await _prefs.setString(_lastFeedbackSyncDateKey, now.toIso8601String());
 
+        if (!mounted) return; // ✅ Ensure safe before using context
+
+        await _loadSliderValues();
+
+        _showCompletionNotification(weekNumberToSync);
+
+        // ✅ Only show SnackBar if widget still exists
         if (mounted) {
-          // Force a reload of the now-zeroed state and updated UI
-          await _loadSliderValues();
-
-          // 🔔 NEW: Show the local notification!
-          _showCompletionNotification(weekNumberToSync);
-
-          // Show in-app Snackbar as well
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Weekly feedback for Week $weekNumberToSync saved and reset.')),
           );
@@ -398,7 +398,7 @@ class _ContentPage4State extends State<ContentPage4> {
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
               thumbColor: Colors.lightGreen,
-              overlayColor: Colors.lightGreen.withOpacity(0.2),
+              overlayColor: Colors.lightGreen.withValues(alpha: 0.2),
 
               // 🚫 Disable the floating value label
               showValueIndicator: ShowValueIndicator.never,

@@ -75,7 +75,7 @@ class NotificationService {
       randomPhrase,
       scheduledTime,
       notificationDetails,
-      androidAllowWhileIdle: true,
+      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
       // Used the fln prefix
       uiLocalNotificationDateInterpretation: fln.UILocalNotificationDateInterpretation.absoluteTime,
       // NOTE: matchDateTimeComponents is NOT used because the time is random daily.
