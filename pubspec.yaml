@@ -15,6 +15,9 @@ dependencies:
   intl: ^0.18.1
   cupertino_icons: ^1.0.8
   fl_chart: ^0.68.0
+  shared_preferences: ^2.2.3
+  flutter_local_notifications: ^17.0.0
+  timezone: ^0.9.0
 
 dev_dependencies:
   flutter_test:
@@ -34,3 +37,6 @@ flutter:
   assets:
     - assets/images/
     - assets/icon/
+    - assets/tasks/
+    - assets/tasks/female/
+    - assets/tasks/male/
