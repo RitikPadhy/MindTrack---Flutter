@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // ✅ NEW: Notification Import
-import '../../services/api_service.dart'; // Ensure this path is correct
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../../services/api_service.dart';
 
 // Global instance for the plugin (common practice for simplicity)
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -23,6 +23,10 @@ class _ContentPage4State extends State<ContentPage4> {
   double proud = 0;
   double busy = 0;
 
+  // ✅ NEW: Text feedback state and controller
+  String feedbackText = "";
+  final TextEditingController _feedbackController = TextEditingController();
+
   // 🗓️ State & Storage Keys
   DateTime? _createdAt;
   late SharedPreferences _prefs;
@@ -37,23 +41,46 @@ class _ContentPage4State extends State<ContentPage4> {
   static const String _happinessKey = 'feedback_happiness';
   static const String _proudKey = 'feedback_proud';
   static const String _busyKey = 'feedback_busy';
+  // ✅ NEW: Key for the feedback text
+  static const String _feedbackTextKey = 'feedback_text';
 
 
   @override
   void initState() {
     super.initState();
-    _initializeNotifications(); // ✅ NEW: Initialize notifications
+    _initializeNotifications();
     _initPrefsAndLoad();
+    // ✅ NEW: Add listener to update state when text field changes
+    _feedbackController.addListener(_updateFeedbackText);
   }
 
-  // --- Notification Initialization ---
+  // ✅ NEW: Dispose the controller and remove the listener
+  @override
+  void dispose() {
+    _feedbackController.removeListener(_updateFeedbackText);
+    _feedbackController.dispose();
+    super.dispose();
+  }
+
+  // ✅ NEW: Listener function
+  void _updateFeedbackText() {
+    final newText = _feedbackController.text;
+    if (feedbackText != newText) {
+      setState(() {
+        feedbackText = newText;
+      });
+      // Immediately save the text input
+      _saveFeedbackText(newText);
+    }
+  }
+
+
+  // --- Notification Initialization (omitted for brevity, no changes here) ---
 
   Future<void> _initializeNotifications() async {
-    // Android setup: requires app icon name (e.g., 'app_icon')
     const AndroidInitializationSettings initializationSettingsAndroid =
     AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // iOS setup: no specific settings needed here, but permissions must be requested elsewhere
     const DarwinInitializationSettings initializationSettingsDarwin =
     DarwinInitializationSettings(
       requestAlertPermission: false,
@@ -68,7 +95,7 @@ class _ContentPage4State extends State<ContentPage4> {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  // 🔔 NEW: Method to show the notification
+  // 🔔 NEW: Method to show the notification (omitted for brevity, no changes here)
   Future<void> _showCompletionNotification(int weekNumber) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
     AndroidNotificationDetails(
@@ -99,6 +126,7 @@ class _ContentPage4State extends State<ContentPage4> {
     await _loadCreatedAt();
     await _checkAndSyncFeedback(); // CRITICAL: Check for rollover and sync before loading
     await _loadSliderValues();
+    await _loadFeedbackText(); // ✅ NEW: Load feedback text
     // After loading, force UI update to show correct week range
     if(mounted) setState(() {});
   }
@@ -139,12 +167,29 @@ class _ContentPage4State extends State<ContentPage4> {
     }
   }
 
+  // ✅ NEW: Load feedback text
+  Future<void> _loadFeedbackText() async {
+    final String loadedText = _prefs.getString(_feedbackTextKey) ?? "";
+    if (mounted) {
+      setState(() {
+        feedbackText = loadedText;
+        _feedbackController.text = loadedText; // Set the controller's text
+      });
+    }
+  }
+
   // 📝 Method to save a single slider value (omitted for brevity, no changes here)
   Future<void> _saveSliderValue(String key, double value) async {
     await _prefs.setDouble(key, value);
   }
 
-  // --- Weekly Sync and Reset Logic ---
+  // ✅ NEW: Method to save feedback text
+  Future<void> _saveFeedbackText(String value) async {
+    await _prefs.setString(_feedbackTextKey, value);
+  }
+
+
+  // --- Weekly Sync and Reset Logic (omitted for brevity, no changes to Week calculation) ---
 
   int _calculateWeekNumber(DateTime startDate) {
     final DateTime today = DateTime.now();
@@ -185,6 +230,7 @@ class _ContentPage4State extends State<ContentPage4> {
 
       try {
         // 1. CALL API (Save current slider values for the week that just ended)
+        // ✅ UPDATED: Include feedbackText
         await _api.updateWeeklyFeedback(
           weekNumber: weekNumberToSync,
           energyLevels: energy,
@@ -192,6 +238,7 @@ class _ContentPage4State extends State<ContentPage4> {
           happiness: happiness,
           proudOfAchievements: proud,
           howBusy: busy,
+          feedbackText: feedbackText, // ✅ NEW PARAMETER
         );
 
         // 2. RESET LOCAL DATA
@@ -202,7 +249,9 @@ class _ContentPage4State extends State<ContentPage4> {
 
         if (!mounted) return; // ✅ Ensure safe before using context
 
+        // Re-load to update UI with reset values
         await _loadSliderValues();
+        await _loadFeedbackText(); // ✅ NEW: Reload (which sets to empty string/resets controller)
 
         _showCompletionNotification(weekNumberToSync);
 
@@ -223,13 +272,15 @@ class _ContentPage4State extends State<ContentPage4> {
     }
   }
 
-  // 📝 Resets the 5 slider values back to 0 in SharedPreferences (omitted for brevity, no changes here)
+  // 📝 Resets the 5 slider values back to 0 in SharedPreferences
+  // ✅ UPDATED: Include feedback text reset
   Future<void> _resetLocalFeedback() async {
     await _prefs.setDouble(_energyKey, 0.0);
     await _prefs.setDouble(_satisfactionKey, 0.0);
     await _prefs.setDouble(_happinessKey, 0.0);
     await _prefs.setDouble(_proudKey, 0.0);
     await _prefs.setDouble(_busyKey, 0.0);
+    await _prefs.setString(_feedbackTextKey, ""); // ✅ NEW: Reset feedback text
   }
 
   // --- Slider Handlers (omitted for brevity, no changes here) ---
@@ -259,7 +310,7 @@ class _ContentPage4State extends State<ContentPage4> {
     _saveSliderValue(_busyKey, v);
   }
 
-  // --- Build Method (omitted for brevity, no changes here) ---
+  // --- Build Method (omitted for brevity, only the children list is relevant) ---
 
   @override
   Widget build(BuildContext context) {
@@ -267,7 +318,7 @@ class _ContentPage4State extends State<ContentPage4> {
     String weekRange;
     String creationDate;
 
-    // 1. Calculate the week range based on _createdAt
+    // ... (omitted week calculation logic) ...
     if (_createdAt != null) {
       final DateTime startDate = _createdAt!;
 
@@ -351,6 +402,11 @@ class _ContentPage4State extends State<ContentPage4> {
               _buildInteractiveBar('Proud of my achievements', proud, _updateProud),
               _buildInteractiveBar('How busy you felt?', busy, _updateBusy),
 
+              const SizedBox(height: 16),
+
+              // ✅ NEW: Feedback Text Box
+              _buildFeedbackTextBox(),
+
               const SizedBox(height: 30),
             ],
           ),
@@ -359,7 +415,7 @@ class _ContentPage4State extends State<ContentPage4> {
     );
   }
 
-  // 🧱 Reusable widget for each feedback slider
+  // 🧱 Reusable widget for each feedback slider (omitted for brevity, no changes here)
   Widget _buildInteractiveBar(
       String label, double value, ValueChanged<double> onChanged) {
     return Container(
@@ -425,6 +481,58 @@ class _ContentPage4State extends State<ContentPage4> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ NEW: Widget for the text input box
+  Widget _buildFeedbackTextBox() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromRGBO(128, 128, 128, 0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Weekly Feedback',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Color(0xA6000000),
+            ),
+          ),
+          const SizedBox(height: 15),
+          TextField(
+            controller: _feedbackController,
+            maxLines: 5,
+            minLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Any thoughts or comments about this week?',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.lightGreen, width: 2),
+              ),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+            keyboardType: TextInputType.multiline,
           ),
         ],
       ),
