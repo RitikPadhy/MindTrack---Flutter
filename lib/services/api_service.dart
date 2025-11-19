@@ -12,7 +12,7 @@ class ApiService {
   // Key for storing the user's tasks/schedule data
   static const String scheduleStorageKey = 'user_schedule_data';
 
-  // --- NEW: Change Password ---
+  // --7- NEW: Change Password ---
   Future<void> changePassword({
     required String email,
     required String oldPassword,
@@ -277,6 +277,7 @@ class ApiService {
   }
 
   // Week Feedback
+  // Week Feedback
   Future<void> updateWeeklyFeedback({
     required int weekNumber,
     required double energyLevels,
@@ -284,8 +285,9 @@ class ApiService {
     required double happiness,
     required double proudOfAchievements,
     required double howBusy,
+    String? feedbackText, // ✅ NEW PARAMETER
   }) async {
-    final url = Uri.parse("$baseUrl/weekly-feedback/update-week"); // Assuming the endpoint is /weekly-feedback/update-week
+    final url = Uri.parse("$baseUrl/weekly-feedback/update-week");
     final headers = await _authHeaders();
 
     final payload = {
@@ -295,6 +297,7 @@ class ApiService {
       "happiness": happiness,
       "proud_of_achievements": proudOfAchievements,
       "how_busy": howBusy,
+      "feedback_text": feedbackText, // ✅ NEW FIELD IN PAYLOAD
     };
 
     final resp = await http.patch(

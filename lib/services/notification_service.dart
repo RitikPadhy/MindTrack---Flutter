@@ -1,6 +1,7 @@
 import 'dart:math';
+import 'dart:io'; // ✅ NEW: Import for Platform check
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln; // Added 'as fln'
+import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 
@@ -10,7 +11,6 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  // Used the fln prefix
   final fln.FlutterLocalNotificationsPlugin _notificationsPlugin = fln.FlutterLocalNotificationsPlugin();
   final Random _random = Random();
 
@@ -28,15 +28,21 @@ class NotificationService {
     "You’re halfway through—every effort counts.",
     "Even a brief moment of meaningful activity lifts the day.",
     "Even small efforts shape your life. Be proud of today’s steps.",
+    "Please update today’s tasks.",
+    "Don’t forget to check in.",
+    "Please enter what you did today.",
+    "Take a minute to update your day.",
+    "Have you completed any tasks? You can do it now.",
+    "Tell us how your day went.",
+    "Please record your activities for today.",
+    "Ready to check in? Tap here."
   ];
 
   // --- 1. Initialization ---
   Future<void> init() async {
     tz.initializeTimeZones();
-    // Set the local time zone (crucial for time-based scheduling)
     tz.setLocalLocation(tz.local);
 
-    // Used the fln prefix
     const fln.AndroidInitializationSettings initializationSettingsAndroid =
     fln.AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -45,6 +51,19 @@ class NotificationService {
     );
 
     await _notificationsPlugin.initialize(initializationSettings);
+
+    // ✅ NEW: Request permission for modern Android versions (Android 13+)
+    if (Platform.isAndroid) {
+      final fln.AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+      _notificationsPlugin.resolvePlatformSpecificImplementation<fln.AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidImplementation != null) {
+        await androidImplementation.requestNotificationsPermission();
+        // Note: Exact alarm permission (SCHEDULE_EXACT_ALARM) cannot be requested via this method
+        // and must be manually requested by the user via system settings if needed,
+        // but the RECEIVERS in the AndroidManifest should help reliability.
+      }
+    }
   }
 
   // --- 2. Scheduling Logic ---
@@ -58,7 +77,6 @@ class NotificationService {
     // 3. Select a random phrase
     final String randomPhrase = _phrases[_random.nextInt(_phrases.length)];
 
-    // Used the fln prefix for all NotificationDetails components
     const fln.NotificationDetails notificationDetails = fln.NotificationDetails(
       android: fln.AndroidNotificationDetails(
         'motivational_channel_id',
@@ -76,10 +94,7 @@ class NotificationService {
       scheduledTime,
       notificationDetails,
       androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
-      // Used the fln prefix
       uiLocalNotificationDateInterpretation: fln.UILocalNotificationDateInterpretation.absoluteTime,
-      // NOTE: matchDateTimeComponents is NOT used because the time is random daily.
-      // The app must re-schedule this every time it is opened.
     );
 
     debugPrint('Notification scheduled for: $scheduledTime with message: $randomPhrase');
@@ -95,10 +110,7 @@ class NotificationService {
       now.day,
     );
 
-    // Total duration of the window in minutes (e.g., 10:00 to 22:00 is 12 hours * 60 = 720 minutes)
     final int minutesInWindow = (endHour - startHour) * 60;
-
-    // Generate a random minute offset within the window
     final int randomOffsetInMinutes = _random.nextInt(minutesInWindow);
 
     // Calculate the target time: Today at startHour + randomOffset

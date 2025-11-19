@@ -7,10 +7,10 @@ class ContentPage1 extends StatelessWidget {
 
   // Example card data
   final List<Map<String, dynamic>> _cards = const [
-    {"id": 1, "text": "When you feel low, keep moving", "icon": Icons.directions_walk},
-    {"id": 2, "text": "Busy hands, calm mind", "icon": Icons.edit_note},
-    {"id": 3, "text": "Doing with others", "icon": Icons.people},
-    {"id": 4, "text": "Power of doing", "icon": Icons.star},
+    {"id": 1, "text": "Feeling low energy?", "icon": Icons.battery_alert},
+    {"id": 2, "text": "Feeling stressed?", "icon": Icons.sentiment_dissatisfied},
+    {"id": 3, "text": "Feeling lonely?", "icon": Icons.person_off},
+    {"id": 4, "text": "Why \"doing\" is important", "icon": Icons.lightbulb},
   ];
 
   @override
@@ -156,17 +156,18 @@ class ContentPage1 extends StatelessWidget {
               return const Text("No content available.");
             } else {
               final content = snapshot.data!['material'] as String;
-              return SizedBox(
-                height: 300,
-                width: double.maxFinite,
+              return ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxHeight: 250, // limit height
+                ),
                 child: SingleChildScrollView(
                   child: Center(
                     child: Text(
                       content,
-                      textAlign: TextAlign.center, // center-align text
+                      textAlign: TextAlign.left,
                       style: const TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.w400, // lighter font weight
+                        fontWeight: FontWeight.w400,
                         color: Colors.black54,
                       ),
                     ),
