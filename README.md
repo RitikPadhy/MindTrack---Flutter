@@ -2,7 +2,7 @@
 
 A mobile app that digitizes activity schedules for individuals with mental illness, enabling them to track daily engagements digitally. It allows occupational therapists to monitor progress and provide personalized follow-ups in real time.
 
-## Getting Started
+## Getting Started with setup
 
 This project is a starting point for a Flutter application.
 
