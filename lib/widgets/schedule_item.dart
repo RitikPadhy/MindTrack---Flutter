@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mind_track/utils/task_image_mapper.dart';
+import 'package:mind_track/l10n/app_localizations.dart';
 
 class ScheduleItem extends StatelessWidget {
   final String time;
@@ -25,6 +26,40 @@ class ScheduleItem extends StatelessWidget {
 
   String _generateBoxKey(int taskIndex, int boxIndex) {
     return "$dateKey-$scheduleIndex-$taskIndex-$boxIndex";
+  }
+
+  // Helper method to translate task names
+  String _translateTask(BuildContext context, String taskName) {
+    final l10n = AppLocalizations.of(context);
+    final lowerTask = taskName.toLowerCase();
+    
+    // Map common task names to translation keys
+    if (lowerTask.contains('prayer')) return l10n.translate('task_prayer');
+    if (lowerTask.contains('exercise')) return l10n.translate('task_exercise');
+    if (lowerTask.contains('breakfast')) return l10n.translate('task_breakfast');
+    if (lowerTask.contains('lunch')) return l10n.translate('task_lunch');
+    if (lowerTask.contains('dinner')) return l10n.translate('task_dinner');
+    if (lowerTask.contains('work')) return l10n.translate('task_work');
+    if (lowerTask.contains('study')) return l10n.translate('task_study');
+    if (lowerTask.contains('reading') || lowerTask.contains('read')) return l10n.translate('task_reading');
+    if (lowerTask.contains('meditation') || lowerTask.contains('meditate')) return l10n.translate('task_meditation');
+    if (lowerTask.contains('yoga')) return l10n.translate('task_yoga');
+    if (lowerTask.contains('walk')) return l10n.translate('task_walk');
+    if (lowerTask.contains('running') || lowerTask.contains('run')) return l10n.translate('task_running');
+    if (lowerTask.contains('cooking') || lowerTask.contains('cook')) return l10n.translate('task_cooking');
+    if (lowerTask.contains('cleaning') || lowerTask.contains('clean')) return l10n.translate('task_cleaning');
+    if (lowerTask.contains('shopping') || lowerTask.contains('shop')) return l10n.translate('task_shopping');
+    if (lowerTask.contains('family')) return l10n.translate('task_family_time');
+    if (lowerTask.contains('social')) return l10n.translate('task_social');
+    if (lowerTask.contains('hobby')) return l10n.translate('task_hobby');
+    if (lowerTask.contains('rest')) return l10n.translate('task_rest');
+    if (lowerTask.contains('sleep')) return l10n.translate('task_sleep');
+    if (lowerTask.contains('bath')) return l10n.translate('task_bathing');
+    if (lowerTask.contains('groom')) return l10n.translate('task_grooming');
+    if (lowerTask.contains('medicine')) return l10n.translate('task_medicine');
+    
+    // If no match found, return original task name
+    return taskName;
   }
 
   // ✅ FIX: Modified to remove mutual exclusivity.
@@ -145,7 +180,7 @@ class ScheduleItem extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            tasks[taskIndex],
+                            _translateTask(context, tasks[taskIndex]),
                             style: const TextStyle(fontSize: 14, color: Colors.black87),
                           ),
                           const SizedBox(height: 6),
