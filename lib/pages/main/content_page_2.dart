@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:mind_track/l10n/app_localizations.dart';
 import '../../services/api_service_2.dart';
 
 class ContentPage2 extends StatefulWidget {
@@ -42,7 +43,7 @@ class _ContentPage2State extends State<ContentPage2> {
       // Log the error for debugging
       debugPrint('Error fetching progress: $e');
       setState(() {
-        _errorMessage = "Failed to load data. Please check your connection.";
+        _errorMessage = AppLocalizations.of(context).translate('failed_to_load');
       });
     } finally {
       setState(() {
@@ -55,25 +56,24 @@ class _ContentPage2State extends State<ContentPage2> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     bool hasData = _topTasks.isNotEmpty;
     bool hasZeroProgress = hasData && (_topTasks.first['percentage_done'] == 0.0);
 
     Widget contentWidget;
 
     if (_isLoading) {
-      // The loader now takes the place of the chart area
       contentWidget = const Center(child: CircularProgressIndicator(color: Color(0xFF9FE2BF)));
     } else if (_errorMessage != null) {
       contentWidget = Center(child: Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)));
     } else if (!hasData || hasZeroProgress) {
-      // Custom message for no data or 0.0% completion for the top task
-      contentWidget = const Center(
+      contentWidget = Center(
         child: Padding(
-          padding: EdgeInsets.all(32.0),
+          padding: const EdgeInsets.all(32.0),
           child: Text(
-            'Start doing the tasks or try logging some progress to see your top statistics here!',
+            l10n.translate('start_doing_tasks'),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18,
               color: Colors.black54,
               fontWeight: FontWeight.w500,
@@ -113,10 +113,10 @@ class _ContentPage2State extends State<ContentPage2> {
                   color: const Color(0xFF9FE2BF),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Track Your Progress',
+                child: Text(
+                  l10n.translate('track_your_progress'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -130,9 +130,9 @@ class _ContentPage2State extends State<ContentPage2> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildProgressButton('DAY'),
-                  _buildProgressButton('WEEK'),
-                  _buildProgressButton('MONTH'),
+                  _buildProgressButton(l10n.translate('day').toUpperCase()),
+                  _buildProgressButton(l10n.translate('week').toUpperCase()),
+                  _buildProgressButton(l10n.translate('month').toUpperCase()),
                 ],
               ),
 
@@ -167,8 +167,8 @@ class _ContentPage2State extends State<ContentPage2> {
                   ),
                   child: Text(
                     _topTasks.first['percentage_done'] > 0
-                        ? 'Great work! You are focusing on ${_topTasks.first['task']}, and staying consistent.'
-                        : 'Keep logging your tasks to see personalized insights here!',
+                        ? '${l10n.translate('great_work')} ${_topTasks.first['task']}${l10n.translate('and_staying_consistent')}'
+                        : l10n.translate('keep_logging'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 16,

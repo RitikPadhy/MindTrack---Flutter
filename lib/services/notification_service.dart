@@ -50,54 +50,179 @@ class NotificationService {
       android: initializationSettingsAndroid,
     );
 
-    await _notificationsPlugin.initialize(initializationSettings);
+    await _notificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: _onNotificationTapped,
+    );
 
-    // ✅ NEW: Request permission for modern Android versions (Android 13+)
+    // ✅ Create notification channel for Android 8.0+
     if (Platform.isAndroid) {
       final fln.AndroidFlutterLocalNotificationsPlugin? androidImplementation =
       _notificationsPlugin.resolvePlatformSpecificImplementation<fln.AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidImplementation != null) {
-        await androidImplementation.requestNotificationsPermission();
-        // Note: Exact alarm permission (SCHEDULE_EXACT_ALARM) cannot be requested via this method
-        // and must be manually requested by the user via system settings if needed,
-        // but the RECEIVERS in the AndroidManifest should help reliability.
+        // Create the notification channel
+        const fln.AndroidNotificationChannel channel = fln.AndroidNotificationChannel(
+          'motivational_channel_id',
+          'Motivational Reminders',
+          description: 'Daily positive phrases at random times.',
+          importance: fln.Importance.high,
+          playSound: true,
+          enableVibration: true,
+        );
+
+        await androidImplementation.createNotificationChannel(channel);
+        debugPrint('✅ Notification channel created successfully');
+
+        // Request notification permission for Android 13+
+        final bool? granted = await androidImplementation.requestNotificationsPermission();
+        debugPrint('📱 Notification permission granted: $granted');
+        
+        // Check if exact alarm permission is granted (Android 12+)
+        final bool? exactAlarmGranted = await androidImplementation.requestExactAlarmsPermission();
+        debugPrint('⏰ Exact alarm permission granted: $exactAlarmGranted');
       }
     }
   }
 
+  // Handle notification tap
+  void _onNotificationTapped(fln.NotificationResponse response) {
+    debugPrint('🔔 Notification tapped: ${response.payload}');
+    // Reschedule the next notification when user taps
+    scheduleRandomDailyNotification();
+  }
+
   // --- 2. Scheduling Logic ---
   Future<void> scheduleRandomDailyNotification() async {
-    // 1. Cancel existing notifications to replace them with a new random one
-    await _notificationsPlugin.cancelAll();
+    try {
+      // 1. Cancel existing notifications to replace them with a new random one
+      await _notificationsPlugin.cancelAll();
+      debugPrint('🗑️ Cancelled all existing notifications');
 
-    // 2. Generate the random time between 10 AM (10) and 10 PM (22)
-    final tz.TZDateTime scheduledTime = _nextInstanceOfRandomTime(10, 22);
+      // 2. Generate the random time between 10 AM (10) and 10 PM (22)
+      final tz.TZDateTime scheduledTime = _nextInstanceOfRandomTime(10, 22);
 
-    // 3. Select a random phrase
-    final String randomPhrase = _phrases[_random.nextInt(_phrases.length)];
+      // 3. Select a random phrase
+      final String randomPhrase = _phrases[_random.nextInt(_phrases.length)];
 
+      const fln.NotificationDetails notificationDetails = fln.NotificationDetails(
+        android: fln.AndroidNotificationDetails(
+          'motivational_channel_id',
+          'Motivational Reminders',
+          channelDescription: 'Daily positive phrases at random times.',
+          importance: fln.Importance.high,
+          priority: fln.Priority.high,
+          playSound: true,
+          enableVibration: true,
+          enableLights: true,
+        ),
+      );
+
+      // 4. Schedule the one-time notification
+      await _notificationsPlugin.zonedSchedule(
+        0, // ID 0 for the single, repeating task
+        'Mind Track Check-in',
+        randomPhrase,
+        scheduledTime,
+        notificationDetails,
+        androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: fln.UILocalNotificationDateInterpretation.absoluteTime,
+        payload: 'daily_reminder',
+      );
+
+      debugPrint('✅ Notification scheduled successfully!');
+      debugPrint('📅 Scheduled for: $scheduledTime');
+      debugPrint('💬 Message: $randomPhrase');
+      debugPrint('⏰ Time until notification: ${scheduledTime.difference(tz.TZDateTime.now(tz.local))}');
+      
+      // Schedule the next notification after this one fires
+      _scheduleRescheduling(scheduledTime);
+    } catch (e) {
+      debugPrint('❌ Error scheduling notification: $e');
+    }
+  }
+
+  // Schedule a rescheduling task to run after the notification fires
+  void _scheduleRescheduling(tz.TZDateTime notificationTime) {
+    // Schedule rescheduling 1 minute after the notification should fire
+    final tz.TZDateTime rescheduleTime = notificationTime.add(const Duration(minutes: 1));
+    
+    _notificationsPlugin.zonedSchedule(
+      999, // Different ID for the rescheduling notification
+      'Rescheduling',
+      'Internal rescheduling task',
+      rescheduleTime,
+      const fln.NotificationDetails(
+        android: fln.AndroidNotificationDetails(
+          'motivational_channel_id',
+          'Motivational Reminders',
+          channelDescription: 'Daily positive phrases at random times.',
+          importance: fln.Importance.low,
+          priority: fln.Priority.low,
+          playSound: false,
+          enableVibration: false,
+          ongoing: false,
+          autoCancel: true,
+        ),
+      ),
+      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: fln.UILocalNotificationDateInterpretation.absoluteTime,
+      payload: 'reschedule_trigger',
+    ).then((_) {
+      debugPrint('🔄 Rescheduling task set for: $rescheduleTime');
+    }).catchError((error) {
+      debugPrint('⚠️ Error setting rescheduling task: $error');
+    });
+  }
+
+  // Call this method when app comes to foreground to ensure notifications are still scheduled
+  Future<void> ensureNotificationsScheduled() async {
+    final List<fln.PendingNotificationRequest> pending =
+        await _notificationsPlugin.pendingNotificationRequests();
+    
+    // If no main notification (ID 0) is pending, reschedule
+    final bool hasMainNotification = pending.any((n) => n.id == 0);
+    
+    if (!hasMainNotification) {
+      debugPrint('⚠️ No notification scheduled, rescheduling now...');
+      await scheduleRandomDailyNotification();
+    } else {
+      debugPrint('✅ Notification already scheduled');
+    }
+  }
+
+  // Test notification - fires immediately
+  Future<void> showTestNotification() async {
     const fln.NotificationDetails notificationDetails = fln.NotificationDetails(
       android: fln.AndroidNotificationDetails(
         'motivational_channel_id',
         'Motivational Reminders',
         channelDescription: 'Daily positive phrases at random times.',
         importance: fln.Importance.high,
+        priority: fln.Priority.high,
+        playSound: true,
+        enableVibration: true,
       ),
     );
 
-    // 4. Schedule the one-time notification
-    await _notificationsPlugin.zonedSchedule(
-      0, // ID 0 for the single, repeating task
-      'Mind Track Check-in',
-      randomPhrase,
-      scheduledTime,
+    await _notificationsPlugin.show(
+      1,
+      'Test Notification',
+      'If you see this, notifications are working! 🎉',
       notificationDetails,
-      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: fln.UILocalNotificationDateInterpretation.absoluteTime,
+      payload: 'test',
     );
+    debugPrint('🧪 Test notification sent');
+  }
 
-    debugPrint('Notification scheduled for: $scheduledTime with message: $randomPhrase');
+  // Get pending notifications for debugging
+  Future<void> checkPendingNotifications() async {
+    final List<fln.PendingNotificationRequest> pending =
+        await _notificationsPlugin.pendingNotificationRequests();
+    debugPrint('📋 Pending notifications: ${pending.length}');
+    for (var notification in pending) {
+      debugPrint('  - ID: ${notification.id}, Title: ${notification.title}, Body: ${notification.body}');
+    }
   }
 
   // Helper to calculate the next occurrence of a random time within the range

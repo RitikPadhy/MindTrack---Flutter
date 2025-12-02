@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:mind_track/l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 
 // Global instance for the plugin (common practice for simplicity)
@@ -111,9 +112,9 @@ class _ContentPage4State extends State<ContentPage4> {
     NotificationDetails(android: androidPlatformChannelSpecifics);
 
     await flutterLocalNotificationsPlugin.show(
-      0, // Notification ID
-      'Feedback Complete! 📝', // Title
-      'Thanks for your feedback! Your data for Week $weekNumber has been successfully saved and your new week has begun.', // Body
+      0,
+      AppLocalizations.of(context).translate('feedback_complete'),
+      '${AppLocalizations.of(context).translate('thanks_for_feedback')} $weekNumber ${AppLocalizations.of(context).translate('successfully_saved')}',
       platformChannelSpecifics,
       payload: 'feedback_synced',
     );
@@ -257,15 +258,17 @@ class _ContentPage4State extends State<ContentPage4> {
 
         // ✅ Only show SnackBar if widget still exists
         if (mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Weekly feedback for Week $weekNumberToSync saved and reset.')),
+            SnackBar(content: Text('${l10n.translate('feedback_saved')} $weekNumberToSync ${l10n.translate('saved_and_reset')}')),
           );
         }
 
       } catch (e) {
         if (mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Warning: Failed to sync feedback: ${e.toString()}. Local data retained.')),
+            SnackBar(content: Text('${l10n.translate('failed_to_sync')} ${e.toString()}${l10n.translate('local_data_retained')}')),
           );
         }
       }
@@ -314,11 +317,11 @@ class _ContentPage4State extends State<ContentPage4> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     DateTime now = DateTime.now();
     String weekRange;
     String creationDate;
 
-    // ... (omitted week calculation logic) ...
     if (_createdAt != null) {
       final DateTime startDate = _createdAt!;
 
@@ -333,7 +336,7 @@ class _ContentPage4State extends State<ContentPage4> {
 
       weekRange = '${DateFormat('d MMMM').format(weekStartDate)} – ${DateFormat('d MMMM').format(weekEndDate)}';
 
-      creationDate = 'Member Since: ${DateFormat('MMMM d, yyyy').format(_createdAt!)} | Week ${_calculateWeekNumber(startDate)}';
+      creationDate = '${l10n.translate('member_since')} ${DateFormat('MMMM d, yyyy').format(_createdAt!)} | ${l10n.translate('week')} ${_calculateWeekNumber(startDate)}';
 
 
     } else {
@@ -358,10 +361,10 @@ class _ContentPage4State extends State<ContentPage4> {
                   color: const Color(0xFF9FE2BF),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Weekly Feedback',
+                child: Text(
+                  l10n.translate('weekly_feedback'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -396,11 +399,11 @@ class _ContentPage4State extends State<ContentPage4> {
               const SizedBox(height: 16),
 
               // 🎚️ Interactive Progress Bars
-              _buildInteractiveBar('Energy Levels', energy, _updateEnergy),
-              _buildInteractiveBar('Satisfaction', satisfaction, _updateSatisfaction),
-              _buildInteractiveBar('Happiness', happiness, _updateHappiness),
-              _buildInteractiveBar('Proud of my achievements', proud, _updateProud),
-              _buildInteractiveBar('How busy you felt?', busy, _updateBusy),
+              _buildInteractiveBar(l10n.translate('energy_levels'), energy, _updateEnergy),
+              _buildInteractiveBar(l10n.translate('satisfaction'), satisfaction, _updateSatisfaction),
+              _buildInteractiveBar(l10n.translate('happiness'), happiness, _updateHappiness),
+              _buildInteractiveBar(l10n.translate('proud_of_achievements'), proud, _updateProud),
+              _buildInteractiveBar(l10n.translate('how_busy'), busy, _updateBusy),
 
               const SizedBox(height: 16),
 
@@ -489,6 +492,7 @@ class _ContentPage4State extends State<ContentPage4> {
 
   // ✅ NEW: Widget for the text input box
   Widget _buildFeedbackTextBox() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       padding: const EdgeInsets.all(18),
@@ -507,9 +511,9 @@ class _ContentPage4State extends State<ContentPage4> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Weekly Feedback',
-            style: TextStyle(
+          Text(
+            l10n.translate('weekly_feedback'),
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
               color: Color(0xA6000000),
@@ -521,7 +525,7 @@ class _ContentPage4State extends State<ContentPage4> {
             maxLines: 5,
             minLines: 3,
             decoration: InputDecoration(
-              hintText: 'Any thoughts or comments about this week?',
+              hintText: l10n.translate('any_thoughts'),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey.shade300),

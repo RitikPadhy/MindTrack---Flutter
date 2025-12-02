@@ -4,7 +4,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mind_track/pages/main/main_view.dart';
-import '../../services/api_service.dart';
+import 'package:mind_track/services/api_service.dart';
+import 'package:mind_track/services/localization_service.dart';
+import 'package:mind_track/l10n/app_localizations.dart';
+import 'package:mind_track/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthPage extends StatefulWidget {
@@ -16,18 +19,19 @@ class AuthPage extends StatefulWidget {
 
 class _AuthPageState extends State<AuthPage> {
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _oldPasswordController = TextEditingController(); // Renamed from _passwordController
-  final TextEditingController _newPasswordController = TextEditingController(); // Replaces _userIdController
+  final TextEditingController _oldPasswordController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
   final ApiService _api = ApiService();
+  final LocalizationService _localizationService = LocalizationService();
 
   bool _isLogin = true;
   bool _loading = false;
-
-  // Removed: String? _selectedGender;
+  String _selectedLanguage = 'en';
 
   @override
   void initState() {
     super.initState();
+    _loadLanguage();
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         systemNavigationBarColor: Color(0xFF2A3848),
@@ -38,6 +42,53 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
+  Future<void> _loadLanguage() async {
+    final locale = await _localizationService.loadLanguage();
+    setState(() {
+      _selectedLanguage = locale.languageCode;
+    });
+  }
+
+  Future<void> _changeLanguage(String languageCode) async {
+    await _localizationService.setLanguage(languageCode);
+    setState(() {
+      _selectedLanguage = languageCode;
+    });
+    
+    // Trigger app rebuild with new locale
+    final provider = _LocalizationProvider.of(context);
+    provider?.changeLanguage(Locale(languageCode));
+  }
+
+  void _showLanguageSelector() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(l10n.selectLanguage),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: LocalizationService.supportedLanguages.map((lang) {
+              return RadioListTile<String>(
+                title: Text(lang.nativeName),
+                subtitle: Text(lang.name),
+                value: lang.code,
+                groupValue: _selectedLanguage,
+                onChanged: (value) {
+                  if (value != null) {
+                    _changeLanguage(value);
+                    Navigator.pop(context);
+                  }
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
   void _showMessage(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg)),
@@ -45,23 +96,23 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _handleAuth() async {
+    final l10n = AppLocalizations.of(context);
     final email = _emailController.text.trim();
-    final oldPassword = _oldPasswordController.text.trim(); // Now old password
-    final newPassword = _newPasswordController.text.trim(); // Only for change password
+    final oldPassword = _oldPasswordController.text.trim();
+    final newPassword = _newPasswordController.text.trim();
 
     // Check for empty fields based on mode
     if (_isLogin) {
       if (email.isEmpty || oldPassword.isEmpty) {
-        _showMessage("Please enter both email and password.");
+        _showMessage(l10n.enterEmailPassword);
         return;
       }
-    } else { // Change Password mode
+    } else {
       if (email.isEmpty || oldPassword.isEmpty || newPassword.isEmpty) {
-        _showMessage("Please fill in all fields (Email, Old Password, New Password).");
+        _showMessage(l10n.fillAllFields);
         return;
       }
     }
-
 
     setState(() => _loading = true);
 
@@ -73,9 +124,7 @@ class _AuthPageState extends State<AuthPage> {
           throw SocketException("No IP found for api.mindtrack.shop");
         }
       } on SocketException catch (_) {
-        _showMessage(
-          "Cannot reach server. Please check your internet or DNS settings.",
-        );
+        _showMessage(l10n.cannotReachServer);
         return;
       }
 
@@ -111,7 +160,8 @@ class _AuthPageState extends State<AuthPage> {
         );
 
         if (!mounted) return;
-        _showMessage("Password changed successfully! Please log in with your new password.");
+        final l10n = AppLocalizations.of(context);
+        _showMessage(l10n.passwordChanged);
         // Clear all fields and switch back to login mode after successful change
         setState(() {
           _isLogin = true;
@@ -129,8 +179,8 @@ class _AuthPageState extends State<AuthPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine the label for the password field based on mode
-    final passwordHintText = _isLogin ? 'Password' : 'Old Password';
+    final l10n = AppLocalizations.of(context);
+    final passwordHintText = _isLogin ? l10n.password : l10n.oldPassword;
 
     return Scaffold(
       body: Stack(
@@ -145,6 +195,41 @@ class _AuthPageState extends State<AuthPage> {
             child: Image.asset('assets/images/logo.jpg', fit: BoxFit.contain),
           ),
           Positioned.fill(child: Container(color: Colors.black.withAlpha(128))),
+          // Language selector button at top right
+          Positioned(
+            top: 48,
+            right: 16,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _showLanguageSelector,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha((0.2 * 255).round()),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withAlpha((0.5 * 255).round())),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.language, color: Colors.white, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        LocalizationService.getLanguageName(_selectedLanguage),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
@@ -164,13 +249,13 @@ class _AuthPageState extends State<AuthPage> {
                       child: TextFormField(
                         controller: _newPasswordController,
                         style: const TextStyle(fontSize: 12),
-                        decoration: const InputDecoration(
-                          hintText: 'New Password',
-                          hintStyle: TextStyle(fontSize: 12),
-                          prefixIcon: Icon(Icons.lock_open, size: 14),
+                        decoration: InputDecoration(
+                          hintText: l10n.newPassword,
+                          hintStyle: const TextStyle(fontSize: 12),
+                          prefixIcon: const Icon(Icons.lock_open, size: 14),
                           border: InputBorder.none,
                           contentPadding:
-                          EdgeInsets.symmetric(vertical: 7, horizontal: 8),
+                          const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
                         ),
                         keyboardType: TextInputType.visiblePassword,
                         obscureText: true,
@@ -188,13 +273,13 @@ class _AuthPageState extends State<AuthPage> {
                     child: TextFormField(
                       controller: _emailController,
                       style: const TextStyle(fontSize: 12),
-                      decoration: const InputDecoration(
-                        hintText: 'Email',
-                        hintStyle: TextStyle(fontSize: 12),
-                        prefixIcon: Icon(Icons.email_outlined, size: 14),
+                      decoration: InputDecoration(
+                        hintText: l10n.email,
+                        hintStyle: const TextStyle(fontSize: 12),
+                        prefixIcon: const Icon(Icons.email_outlined, size: 14),
                         border: InputBorder.none,
                         contentPadding:
-                        EdgeInsets.symmetric(vertical: 7, horizontal: 8),
+                        const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
                       ),
                       keyboardType: TextInputType.emailAddress,
                     ),
@@ -243,7 +328,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                     )
                         : Text(
-                      _isLogin ? 'Sign In' : 'Set New Password',
+                      _isLogin ? l10n.signIn : l10n.setNewPassword,
                       style: const TextStyle(
                           fontSize: 14,
                           color: Colors.white,
@@ -264,8 +349,8 @@ class _AuthPageState extends State<AuthPage> {
                     },
                     child: Text(
                       _isLogin
-                          ? 'Forgot password? Change it now' // Updated prompt
-                          : 'Remembered password? Sign In', // Updated prompt
+                          ? l10n.forgotPassword
+                          : l10n.rememberedPassword,
                       style: const TextStyle(
                           color: Colors.white70, fontSize: 11),
                     ),

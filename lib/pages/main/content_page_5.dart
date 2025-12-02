@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert'; // Added for jsonDecode
+import 'package:mind_track/l10n/app_localizations.dart';
+import 'dart:convert';
 
 class ContentPage5 extends StatefulWidget {
   const ContentPage5({super.key});
@@ -35,7 +36,7 @@ class _ContentPage5State extends State<ContentPage5> {
     if (mounted) {
       setState(() {
         _achievements = loadedAchievements.isEmpty
-            ? _getDefaultMessages() // Fallback if nothing is synced yet
+            ? _getDefaultMessages(context)
             : loadedAchievements;
         _isLoading = false;
       });
@@ -43,11 +44,12 @@ class _ContentPage5State extends State<ContentPage5> {
   }
 
   // Default messages for the initial state before the first weekly sync
-  List<Map<String, String>> _getDefaultMessages() {
+  List<Map<String, String>> _getDefaultMessages(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return [
-      {"title": "Mind Track Welcome", "message1": "Check back after your first weekly sync!", "message2": "Your weekly achievements will appear here."},
-      {"title": "Consistency Goal", "message1": "Keep tracking your routines.", "message2": "Tiny actions build big habits. Aim for 5 days of activity."},
-      {"title": "Variety Goal", "message1": "Explore different activities.", "message2": "Aim to track activities in 3 or more life areas."}
+      {"title": l10n.translate('mind_track_welcome'), "message1": l10n.translate('check_back_after_sync'), "message2": l10n.translate('achievements_appear_here')},
+      {"title": l10n.translate('consistency_goal'), "message1": l10n.translate('keep_tracking'), "message2": l10n.translate('tiny_actions')},
+      {"title": l10n.translate('variety_goal'), "message1": l10n.translate('explore_activities'), "message2": l10n.translate('aim_for_variety')}
     ];
   }
 
@@ -61,10 +63,10 @@ class _ContentPage5State extends State<ContentPage5> {
 
   @override
   Widget build(BuildContext context) {
-    // Use the first achievement for the main circle display
+    final l10n = AppLocalizations.of(context);
     final Map<String, String> mainAchievement = _achievements.isNotEmpty
         ? _achievements[0]
-        : _getDefaultMessages()[0]; // Use default if list is empty
+        : _getDefaultMessages(context)[0];
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -82,10 +84,10 @@ class _ContentPage5State extends State<ContentPage5> {
                   color: const Color(0xFF9FE2BF),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Achievements',
+                child: Text(
+                  l10n.translate('achievements'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -113,8 +115,8 @@ class _ContentPage5State extends State<ContentPage5> {
                 ),
                 child: Text(
                   _isLoading
-                      ? 'Fetching your weekly report...'
-                      : 'Congratulations! Here is your Mind Track Weekly Report.',
+                      ? l10n.translate('fetching_report')
+                      : l10n.translate('congratulations'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 16,
@@ -208,8 +210,8 @@ class _ContentPage5State extends State<ContentPage5> {
               if (!_isLoading && _achievements.length < 2)
                 _buildAchievementMessage(
                   emoji: '👍',
-                  title: 'Getting Started',
-                  message: 'Keep tracking your daily routines! More achievements unlock after next week\'s sync.',
+                  title: l10n.translate('getting_started'),
+                  message: l10n.translate('more_achievements'),
                 ),
 
               const SizedBox(height: 20),

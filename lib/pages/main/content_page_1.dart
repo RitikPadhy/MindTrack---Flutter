@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mind_track/services/api_service.dart';
+import 'package:mind_track/l10n/app_localizations.dart';
 
 class ContentPage1 extends StatelessWidget {
   const ContentPage1({super.key});
 
-  // Example card data
-  final List<Map<String, dynamic>> _cards = const [
-    {"id": 1, "text": "Feeling low energy?", "icon": Icons.battery_alert},
-    {"id": 2, "text": "Feeling stressed?", "icon": Icons.sentiment_dissatisfied},
-    {"id": 3, "text": "Feeling lonely?", "icon": Icons.person_off},
-    {"id": 4, "text": "Why \"doing\" is important", "icon": Icons.lightbulb},
-  ];
+  List<Map<String, dynamic>> _getCards(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return [
+      {"id": 1, "text": l10n.translate('feeling_low_energy'), "icon": Icons.battery_alert},
+      {"id": 2, "text": l10n.translate('feeling_stressed'), "icon": Icons.sentiment_dissatisfied},
+      {"id": 3, "text": l10n.translate('feeling_lonely'), "icon": Icons.person_off},
+      {"id": 4, "text": l10n.translate('why_doing_important'), "icon": Icons.lightbulb},
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final cards = _getCards(context);
+    
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: SafeArea(
@@ -30,10 +36,10 @@ class ContentPage1 extends StatelessWidget {
                   color: const Color(0xFF9FE2BF),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Reading Material',
+                child: Text(
+                  l10n.translate('reading_material'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -43,7 +49,7 @@ class ContentPage1 extends StatelessWidget {
               const SizedBox(height: 30),
 
               // Build all cards dynamically
-              for (var card in _cards)
+              for (var card in cards)
                 _buildCard(
                   color: Colors.white,
                   icon: card["icon"],
@@ -151,9 +157,11 @@ class ContentPage1 extends StatelessWidget {
                 child: Center(child: CircularProgressIndicator()),
               );
             } else if (snapshot.hasError) {
-              return Text("Error: ${snapshot.error}");
+              final l10n = AppLocalizations.of(context);
+              return Text("${l10n.error}: ${snapshot.error}");
             } else if (!snapshot.hasData || snapshot.data!['material'] == null) {
-              return const Text("No content available.");
+              final l10n = AppLocalizations.of(context);
+              return Text(l10n.translate('no_content_available'));
             } else {
               final content = snapshot.data!['material'] as String;
               return ConstrainedBox(

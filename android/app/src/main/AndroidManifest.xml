@@ -1,11 +1,24 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Internet permission -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Boot completed permission for rescheduling notifications after reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
+    <!-- Notification permission for Android 13+ (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- Exact alarm permission for Android 12+ (API 31+) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    
+    <!-- Use exact alarm permission (alternative for some devices) -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    
+    <!-- Wake lock to ensure notifications fire even when device is sleeping -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- Vibration permission for notification alerts -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
 
     <application

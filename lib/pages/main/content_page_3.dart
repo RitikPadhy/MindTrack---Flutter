@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mind_track/widgets/schedule_item.dart';
+import 'package:mind_track/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../services/api_service.dart';
@@ -442,10 +443,10 @@ class ContentPage3State extends State<ContentPage3> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 24),
               color: const Color(0xFF9FE2BF),
-              child: const Center(
+              child: Center(
                 child: Text(
-                  'Daily Schedule',
-                  style: TextStyle(
+                  AppLocalizations.of(context).translate('daily_schedule'),
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
