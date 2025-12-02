@@ -72,7 +72,6 @@ class AppLocalizations {
       // Content Page 4 - Weekly Feedback
       'weekly_feedback': 'Weekly Feedback',
       'member_since': 'Member Since:',
-      'week': 'Week',
       'energy_levels': 'Energy Levels',
       'satisfaction': 'Satisfaction',
       'happiness': 'Happiness',

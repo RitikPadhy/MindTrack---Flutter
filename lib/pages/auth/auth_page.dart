@@ -51,13 +51,15 @@ class _AuthPageState extends State<AuthPage> {
 
   Future<void> _changeLanguage(String languageCode) async {
     await _localizationService.setLanguage(languageCode);
-    setState(() {
-      _selectedLanguage = languageCode;
-    });
-    
-    // Trigger app rebuild with new locale
-    final provider = _LocalizationProvider.of(context);
-    provider?.changeLanguage(Locale(languageCode));
+    if (mounted) {
+      setState(() {
+        _selectedLanguage = languageCode;
+      });
+      
+      // Trigger app rebuild with new locale
+      final provider = LocalizationProvider.of(context);
+      provider?.changeLanguage(Locale(languageCode));
+    }
   }
 
   void _showLanguageSelector() {
@@ -70,16 +72,22 @@ class _AuthPageState extends State<AuthPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: LocalizationService.supportedLanguages.map((lang) {
-              return RadioListTile<String>(
+              return ListTile(
                 title: Text(lang.nativeName),
                 subtitle: Text(lang.name),
-                value: lang.code,
-                groupValue: _selectedLanguage,
-                onChanged: (value) {
-                  if (value != null) {
-                    _changeLanguage(value);
-                    Navigator.pop(context);
-                  }
+                leading: Radio<String>(
+                  value: lang.code,
+                  groupValue: _selectedLanguage,
+                  onChanged: (value) {
+                    if (value != null) {
+                      _changeLanguage(value);
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+                onTap: () {
+                  _changeLanguage(lang.code);
+                  Navigator.pop(context);
                 },
               );
             }).toList(),

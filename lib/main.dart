@@ -106,7 +106,7 @@ class _MyAppState extends State<MyApp> {
       ],
       home: _home,
       builder: (context, child) {
-        return _LocalizationProvider(
+        return LocalizationProvider(
           changeLanguage: changeLanguage,
           child: child!,
         );
@@ -115,18 +115,18 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-class _LocalizationProvider extends InheritedWidget {
+class LocalizationProvider extends InheritedWidget {
   final Function(Locale) changeLanguage;
 
-  const _LocalizationProvider({
+  const LocalizationProvider({
     required this.changeLanguage,
     required super.child,
   });
 
-  static _LocalizationProvider? of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<_LocalizationProvider>();
+  static LocalizationProvider? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<LocalizationProvider>();
   }
 
   @override
-  bool updateShouldNotify(_LocalizationProvider oldWidget) => false;
+  bool updateShouldNotify(LocalizationProvider oldWidget) => false;
 }
