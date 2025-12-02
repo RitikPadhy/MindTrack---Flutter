@@ -72,19 +72,15 @@ class _AuthPageState extends State<AuthPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: LocalizationService.supportedLanguages.map((lang) {
+              final isSelected = lang.code == _selectedLanguage;
               return ListTile(
                 title: Text(lang.nativeName),
                 subtitle: Text(lang.name),
-                leading: Radio<String>(
-                  value: lang.code,
-                  groupValue: _selectedLanguage,
-                  onChanged: (value) {
-                    if (value != null) {
-                      _changeLanguage(value);
-                      Navigator.pop(context);
-                    }
-                  },
+                leading: Icon(
+                  isSelected ? Icons.check_circle : Icons.circle_outlined,
+                  color: isSelected ? Colors.green : Colors.grey,
                 ),
+                selected: isSelected,
                 onTap: () {
                   _changeLanguage(lang.code);
                   Navigator.pop(context);

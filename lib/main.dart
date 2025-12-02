@@ -119,6 +119,7 @@ class LocalizationProvider extends InheritedWidget {
   final Function(Locale) changeLanguage;
 
   const LocalizationProvider({
+    super.key,
     required this.changeLanguage,
     required super.child,
   });
