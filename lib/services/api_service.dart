@@ -68,19 +68,20 @@ class ApiService {
     }
   }
 
-  // ---------- Change Password ----------
+  // ---------- Change Password (Set New Password via UID + Current Password) ----------
   Future<void> changePassword({
     required String uid,
     required String oldPassword,
     required String newPassword,
   }) async {
-    final url = Uri.parse("$baseUrl/auth/change-password");
+    final url = Uri.parse("$baseUrl/auth/set-new-password");
+
     final resp = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "uid": uid,
-        "old_password": oldPassword,
+        "password": oldPassword, // current password
         "new_password": newPassword,
       }),
     );
