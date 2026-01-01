@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart'; // ✅ Firebase Core
 import 'package:mind_track/pages/auth/auth_page.dart';
 import 'package:mind_track/pages/main/main_view.dart';
 import 'package:mind_track/services/api_service.dart';
@@ -8,18 +9,20 @@ import 'package:mind_track/services/localization_service.dart';
 import 'package:mind_track/l10n/app_localizations.dart';
 
 void main() async {
-  // Required to call native APIs before runApp()
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize the notification service and schedule the first random notification
+  // 🔹 Initialize Firebase first
+  try {
+    await Firebase.initializeApp();
+    debugPrint('✅ Firebase initialized');
+  } catch (e) {
+    debugPrint('❌ Error initializing Firebase: $e');
+  }
+
+  // 🔹 Initialize notifications
   try {
     await NotificationService().init();
-    debugPrint('✅ NotificationService initialized');
-    
     await NotificationService().scheduleRandomDailyNotification();
-    debugPrint('✅ Initial notification scheduled');
-    
-    // Check pending notifications for debugging
     await NotificationService().checkPendingNotifications();
   } catch (e) {
     debugPrint('❌ Error initializing notifications: $e');
@@ -53,7 +56,7 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       _locale = savedLocale;
     });
-    
+
     // Check login status
     _checkLogin();
   }
@@ -68,13 +71,10 @@ class _MyAppState extends State<MyApp> {
     try {
       final isLoggedIn = await _api.tryAutoLogin();
       if (isLoggedIn) {
-        // Reschedule the daily notification upon successful auto-login/app startup
+        // Reschedule daily notifications after auto-login
         await NotificationService().scheduleRandomDailyNotification();
-        debugPrint('✅ Notification rescheduled after login');
-        
-        // Check pending notifications
         await NotificationService().checkPendingNotifications();
-        
+
         setState(() => _home = const MainView());
       } else {
         setState(() => _home = const AuthPage());

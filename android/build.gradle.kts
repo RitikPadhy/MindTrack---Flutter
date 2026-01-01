@@ -1,3 +1,17 @@
+// Top-level build file
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        // ✅ Google Services plugin for Firebase
+        classpath("com.google.gms:google-services:4.4.0")
+    }
+}
+
 allprojects {
     repositories {
         google()
@@ -5,6 +19,7 @@ allprojects {
     }
 }
 
+// Optional: Customize build directories
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")

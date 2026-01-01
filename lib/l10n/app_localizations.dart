@@ -15,6 +15,8 @@ class AppLocalizations {
   static final Map<String, Map<String, String>> _localizedValues = {
     'en': {
       // Auth Page
+      'enter_uid_password': 'Enter UID Password',
+      'uid': 'UID',
       'email': 'Email',
       'password': 'Password',
       'old_password': 'Old Password',
@@ -129,6 +131,8 @@ class AppLocalizations {
     },
     'hi': {
       // Auth Page
+      'enter_uid_password': 'यूआईडी पासवर्ड दर्ज करें',
+      'uid': 'यूआईडी',
       'email': 'ईमेल',
       'password': 'पासवर्ड',
       'old_password': 'पुराना पासवर्ड',
@@ -243,6 +247,8 @@ class AppLocalizations {
     },
     'kn': {
       // Auth Page
+      'enter_uid_password': 'UID ಪಾಸ್ವರ್ಡ್ ನಮೂದಿಸಿ',
+      'uid': 'ಯುಐಡಿ',
       'email': 'ಇಮೇಲ್',
       'password': 'ಪಾಸ್‌ವರ್ಡ್',
       'old_password': 'ಹಳೆಯ ಪಾಸ್‌ವರ್ಡ್',
@@ -357,6 +363,8 @@ class AppLocalizations {
     },
     'ml': {
       // Auth Page
+      'enter_uid_password': 'യുഐഡി പാസ്‌വേഡ് നൽകുക',
+      'uid': 'യുഐഡി',
       'email': 'ഇമെയിൽ',
       'password': 'പാസ്‌വേഡ്',
       'old_password': 'പഴയ പാസ്‌വേഡ്',
@@ -478,6 +486,8 @@ class AppLocalizations {
   }
 
   // Convenience getters for commonly used strings
+  String get uid => translate('uid');
+  String get enterUidPassword => translate('enter_uid_password');
   String get email => translate('email');
   String get password => translate('password');
   String get oldPassword => translate('old_password');

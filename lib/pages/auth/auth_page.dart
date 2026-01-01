@@ -1,4 +1,4 @@
-// auth_page.dart (Modified)
+// auth_page.dart (Updated for UID login)
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -7,7 +7,6 @@ import 'package:mind_track/pages/main/main_view.dart';
 import 'package:mind_track/services/api_service.dart';
 import 'package:mind_track/services/localization_service.dart';
 import 'package:mind_track/l10n/app_localizations.dart';
-import 'package:mind_track/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthPage extends StatefulWidget {
@@ -18,7 +17,7 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _uidController = TextEditingController();
   final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final ApiService _api = ApiService();
@@ -55,10 +54,6 @@ class _AuthPageState extends State<AuthPage> {
       setState(() {
         _selectedLanguage = languageCode;
       });
-      
-      // Trigger app rebuild with new locale
-      final provider = LocalizationProvider.of(context);
-      provider?.changeLanguage(Locale(languageCode));
     }
   }
 
@@ -101,18 +96,18 @@ class _AuthPageState extends State<AuthPage> {
 
   Future<void> _handleAuth() async {
     final l10n = AppLocalizations.of(context);
-    final email = _emailController.text.trim();
+    final uid = _uidController.text.trim();
     final oldPassword = _oldPasswordController.text.trim();
     final newPassword = _newPasswordController.text.trim();
 
     // Check for empty fields based on mode
     if (_isLogin) {
-      if (email.isEmpty || oldPassword.isEmpty) {
-        _showMessage(l10n.enterEmailPassword);
+      if (uid.isEmpty || oldPassword.isEmpty) {
+        _showMessage(l10n.enterUidPassword);
         return;
       }
     } else {
-      if (email.isEmpty || oldPassword.isEmpty || newPassword.isEmpty) {
+      if (uid.isEmpty || oldPassword.isEmpty || newPassword.isEmpty) {
         _showMessage(l10n.fillAllFields);
         return;
       }
@@ -124,52 +119,47 @@ class _AuthPageState extends State<AuthPage> {
       // ---------- DNS Check ----------
       try {
         final addresses = await _api.resolveApi();
-        if (addresses.isEmpty) {
-          throw SocketException("No IP found for api.mindtrack.shop");
-        }
-      } on SocketException catch (_) {
+        if (addresses.isEmpty) throw SocketException("No IP found for API");
+      } on SocketException {
         _showMessage(l10n.cannotReachServer);
         return;
       }
 
       // ---------- Login / Change Password ----------
       if (_isLogin) {
-        // --- LOGIN LOGIC (Remains the same) ---
-        await _api.login(email: email, password: oldPassword); // oldPassword is the current password
+        // --- LOGIN LOGIC ---
+        await _api.login(uid: uid, password: oldPassword);
 
-        // ✅ 1. Call API to get profile which includes the dynamic 'tasks' array
+        // Get profile which includes tasks
         final profileData = await _api.getProfile();
 
-        // ✅ 2. Extract the tasks array and cast it
-        final List<Map<String, dynamic>> fetchedTasks =
-        (profileData['tasks'] as List).cast<Map<String, dynamic>>();
-
-        // ✅ 3. Save the tasks array locally using shared_preferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            ApiService.scheduleStorageKey,
-            jsonEncode(fetchedTasks) // Convert List<Map> to JSON string for saving
-        );
+        // Save tasks locally
+        if (profileData.containsKey('tasks')) {
+          final List<Map<String, dynamic>> fetchedTasks =
+          (profileData['tasks'] as List).cast<Map<String, dynamic>>();
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(
+              ApiService.scheduleStorageKey, jsonEncode(fetchedTasks));
+        }
 
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const MainView()),
         );
       } else {
-        // --- CHANGE PASSWORD LOGIC (New) ---
+        // --- CHANGE PASSWORD LOGIC ---
         await _api.changePassword(
-          email: email,
+          uid: uid,
           oldPassword: oldPassword,
           newPassword: newPassword,
         );
 
         if (!mounted) return;
-        final l10n = AppLocalizations.of(context);
         _showMessage(l10n.passwordChanged);
-        // Clear all fields and switch back to login mode after successful change
+        // Clear fields and switch back to login
         setState(() {
           _isLogin = true;
-          _emailController.clear();
+          _uidController.clear();
           _oldPasswordController.clear();
           _newPasswordController.clear();
         });
@@ -199,7 +189,7 @@ class _AuthPageState extends State<AuthPage> {
             child: Image.asset('assets/images/logo.jpg', fit: BoxFit.contain),
           ),
           Positioned.fill(child: Container(color: Colors.black.withAlpha(128))),
-          // Language selector button at top right
+          // Language selector button
           Positioned(
             top: 48,
             right: 16,
@@ -242,7 +232,6 @@ class _AuthPageState extends State<AuthPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // New Password Field (Replaces Gender/User ID field)
                   if (!_isLogin) ...[
                     Container(
                       height: 40,
@@ -267,7 +256,7 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  // Email Field
+                  // UID Field
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
@@ -275,21 +264,20 @@ class _AuthPageState extends State<AuthPage> {
                       borderRadius: BorderRadius.circular(6.0),
                     ),
                     child: TextFormField(
-                      controller: _emailController,
+                      controller: _uidController,
                       style: const TextStyle(fontSize: 12),
                       decoration: InputDecoration(
-                        hintText: l10n.email,
+                        hintText: l10n.uid,
                         hintStyle: const TextStyle(fontSize: 12),
-                        prefixIcon: const Icon(Icons.email_outlined, size: 14),
+                        prefixIcon: const Icon(Icons.person_outline, size: 14),
                         border: InputBorder.none,
                         contentPadding:
                         const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
                       ),
-                      keyboardType: TextInputType.emailAddress,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Old/Current Password Field
+                  // Password Field
                   Container(
                     height: 40,
                     decoration: BoxDecoration(
@@ -297,7 +285,7 @@ class _AuthPageState extends State<AuthPage> {
                       borderRadius: BorderRadius.circular(6.0),
                     ),
                     child: TextFormField(
-                      controller: _oldPasswordController, // Now for old/current password
+                      controller: _oldPasswordController,
                       style: const TextStyle(fontSize: 12),
                       decoration: InputDecoration(
                         hintText: passwordHintText,
@@ -311,7 +299,6 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  // Sign In / Change Password Button
                   ElevatedButton(
                     onPressed: _loading ? null : _handleAuth,
                     style: ElevatedButton.styleFrom(
@@ -340,23 +327,18 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  // Toggle Button
                   TextButton(
                     onPressed: _loading
                         ? null
                         : () {
                       setState(() {
                         _isLogin = !_isLogin;
-                        // Clear New Password field when switching back to Login
                         if (_isLogin) _newPasswordController.clear();
                       });
                     },
                     child: Text(
-                      _isLogin
-                          ? l10n.forgotPassword
-                          : l10n.rememberedPassword,
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 11),
+                      _isLogin ? l10n.forgotPassword : l10n.rememberedPassword,
+                      style: const TextStyle(color: Colors.white70, fontSize: 11),
                     ),
                   ),
                 ],
