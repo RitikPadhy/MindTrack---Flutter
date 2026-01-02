@@ -121,6 +121,14 @@ class ContentPage3State extends State<ContentPage3> {
       if (apiData.containsKey('tasks') && apiData['tasks'] is List) {
         _scheduleData = (apiData['tasks'] as List).cast<Map<String, dynamic>>();
         debugPrint("DEBUG: Loaded ${_scheduleData.length} task items from API");
+        
+        // Debug: Print the first few items to see the structure
+        if (_scheduleData.isNotEmpty) {
+          debugPrint("DEBUG: First task item structure: ${_scheduleData[0]}");
+          if (_scheduleData.length > 1) {
+            debugPrint("DEBUG: Second task item structure: ${_scheduleData[1]}");
+          }
+        }
       } else {
         debugPrint("WARNING: API response missing 'tasks' key or invalid format");
         _scheduleData = [];
@@ -520,7 +528,28 @@ class ContentPage3State extends State<ContentPage3> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   itemCount: _scheduleData.length,
                   itemBuilder: (context, i) {
-                    final taskList = List<String>.from(_scheduleData[i]["tasks"] ?? []);
+                    // Handle both "tasks" and "items" keys (web interface uses "items", backend uses "tasks")
+                    final taskData = _scheduleData[i];
+                    List<String> taskList = [];
+                    
+                    if (taskData.containsKey("tasks")) {
+                      // Backend format: {"tasks": ["task1", "task2"]}
+                      final tasks = taskData["tasks"];
+                      if (tasks is List) {
+                        taskList = tasks.map((t) => t.toString()).toList().cast<String>();
+                      }
+                    } else if (taskData.containsKey("items")) {
+                      // Web interface format: {"items": [{"title": "task1", "category": "..."}, ...]}
+                      final items = taskData["items"];
+                      if (items is List) {
+                        taskList = items.map((item) {
+                          if (item is Map) {
+                            return (item["title"] ?? item.toString()) as String;
+                          }
+                          return item.toString();
+                        }).toList().cast<String>();
+                      }
+                    }
 
                     // Do not render if the task list is empty
                     if (taskList.isEmpty) {
