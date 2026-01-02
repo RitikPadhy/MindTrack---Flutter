@@ -109,38 +109,66 @@ class ContentPage3State extends State<ContentPage3> {
 
     final selectedDateKey = _getDateKey(_selectedDay);
     final today = DateTime.now();
+    Map<String, dynamic>? apiData;
 
     try {
-      if (_isSameDay(_selectedDay, today)) {
-        // --- CASE 1: CURRENT DAY (Load from local storage with midnight sync check) ---
-        debugPrint("DEBUG: Loading LOCAL data for $selectedDateKey");
-        await _loadLocalScheduleAndChecks(selectedDateKey);
+      // Always fetch tasks from API to get the latest updates
+      debugPrint("DEBUG: Fetching data from API for $selectedDateKey");
+      apiData = await _api.getDayRoutine(selectedDateKey);
+      debugPrint("DEBUG: Successfully fetched data from API for $selectedDateKey");
+      
+      // Update Schedule Data (The 'tasks' array from the API)
+      if (apiData.containsKey('tasks') && apiData['tasks'] is List) {
+        _scheduleData = (apiData['tasks'] as List).cast<Map<String, dynamic>>();
+        debugPrint("DEBUG: Loaded ${_scheduleData.length} task items from API");
       } else {
-        // --- CASE 2: NON-CURRENT DAY (Load from API) ---
-        debugPrint("DEBUG: Loading API data for $selectedDateKey");
-        await _loadApiDayRoutine(selectedDateKey);
+        debugPrint("WARNING: API response missing 'tasks' key or invalid format");
+        _scheduleData = [];
+      }
+
+      if (_isSameDay(_selectedDay, today)) {
+        // --- CASE 1: CURRENT DAY (Load checked state from local storage with midnight sync check) ---
+        debugPrint("DEBUG: Loading LOCAL checked state for $selectedDateKey");
+        await _loadLocalCheckedState(selectedDateKey);
+      } else {
+        // --- CASE 2: NON-CURRENT DAY (Load checked state from API routine data) ---
+        debugPrint("DEBUG: Loading API checked state for $selectedDateKey");
+        _loadCheckedStateFromApiData(selectedDateKey, apiData);
       }
     } catch (e) {
+      debugPrint("ERROR: Failed to load data for $selectedDateKey: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading schedule for $selectedDateKey: ${e.toString()}')),
         );
       }
-      _scheduleData = [];
+      // Fallback to local storage for tasks if API fails
+      await _loadTasksFromLocalStorage();
+      _scheduleData = _scheduleData.isNotEmpty ? _scheduleData : [];
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Helper to load data from SharedPreferences (for current day)
-  Future<void> _loadLocalScheduleAndChecks(String dateKey) async {
-    // 1. Load schedule data (saved during login via /auth/me)
+  // Fallback to load tasks from local storage
+  Future<void> _loadTasksFromLocalStorage() async {
     final scheduleJsonString = _prefs.getString(ApiService.scheduleStorageKey);
     if (scheduleJsonString != null) {
-      _scheduleData = (jsonDecode(scheduleJsonString) as List).cast<Map<String, dynamic>>();
+      try {
+        _scheduleData = (jsonDecode(scheduleJsonString) as List).cast<Map<String, dynamic>>();
+        debugPrint("DEBUG: Fallback: Loaded tasks from local storage");
+      } catch (e) {
+        debugPrint("ERROR: Failed to parse local schedule data: $e");
+        _scheduleData = [];
+      }
+    } else {
+      _scheduleData = [];
     }
+  }
 
-    // 2. Midnight cleanup and sync check
+  // Helper to load checked state from local storage (for current day)
+  Future<void> _loadLocalCheckedState(String dateKey) async {
+    // 1. Midnight cleanup and sync check
     final savedDateString = _prefs.getString(_lastAccessDateKey);
     final todayString = _getDateKey(DateTime.now());
 
@@ -186,7 +214,7 @@ class ContentPage3State extends State<ContentPage3> {
       debugPrint("DEBUG: Local checked state cleared.");
     }
 
-    // 3. Load the checked state for the currently selected day (which is 'today')
+    // 2. Load the checked state for the currently selected day (which is 'today')
     final jsonString = _prefs.getString(_storageKey);
     if (jsonString != null) {
       final Map<String, dynamic> loadedMap = Map<String, dynamic>.from(jsonDecode(jsonString));
@@ -195,10 +223,47 @@ class ContentPage3State extends State<ContentPage3> {
           _checkedState[key] = value is bool ? value : false;
         }
       });
+      debugPrint("DEBUG: Loaded checked state from local storage for $dateKey");
     }
 
-    // 4. Final step: update last access date
+    // 3. Final step: update last access date
     await _prefs.setString(_lastAccessDateKey, todayString);
+  }
+
+  // Helper to load checked state from API routine data (for non-current day)
+  // Uses the already-fetched API data to avoid duplicate API calls
+  void _loadCheckedStateFromApiData(String dateKey, Map<String, dynamic> apiData) {
+    _checkedState.clear();
+    final Map<String, dynamic> routineData = apiData['routine'] ?? {};
+
+    routineData.forEach((hour, hourData) {
+      final slots = hourData['slots'] as Map<String, dynamic>;
+
+      // Map 15-min slots to the 4 boxes (k=0, 1, 2, 3)
+      final List<String> slotMinutes = ['00', '15', '30', '45'];
+
+      // Get the schedule index (i) from the time string (e.g., 06:00 -> 0)
+      final int? scheduleIndex = int.tryParse(hour.substring(0, 2));
+      if (scheduleIndex == null) return;
+      final int index = scheduleIndex - 6;
+
+      if (index >= 0 && index < 17) {
+        for (int k = 0; k < 4; k++) {
+          // The slot time from the API is HH:MM
+          final slotTime = hour.substring(0, 3) + slotMinutes[k];
+          final isFilled = slots[slotTime]?['filled'] ?? false;
+
+          if (isFilled) {
+            // If a slot is marked as 'filled' in the API, we mark the *first task's* box (j=0) as checked
+            // as we don't have task-specific completion history here.
+            final key = "$dateKey-$index-0-$k";
+            _checkedState[key] = true;
+          }
+        }
+      }
+    });
+
+    debugPrint("DEBUG: Loaded checked state from API for $dateKey");
   }
 
   // --- Transformation Logic ---
@@ -254,45 +319,6 @@ class ContentPage3State extends State<ContentPage3> {
   // --- End Transformation Logic ---
 
 
-  // Helper to load data from API (for non-current day)
-  Future<void> _loadApiDayRoutine(String dateKey) async {
-    final data = await _api.getDayRoutine(dateKey);
-
-    // 1. Update Schedule Data (The 'tasks' array from the API)
-    _scheduleData = (data['tasks'] as List).cast<Map<String, dynamic>>();
-
-    // 2. Update Checked State based on granular slots from API
-    _checkedState.clear();
-    final Map<String, dynamic> routineData = data['routine'] ?? {};
-
-    routineData.forEach((hour, hourData) {
-      final slots = hourData['slots'] as Map<String, dynamic>;
-
-      // Map 15-min slots to the 4 boxes (k=0, 1, 2, 3)
-      final List<String> slotMinutes = ['00', '15', '30', '45'];
-
-      // Get the schedule index (i) from the time string (e.g., 06:00 -> 0)
-      final int scheduleIndex = int.tryParse(hour.substring(0, 2))! - 6;
-
-      if (scheduleIndex >= 0 && scheduleIndex < 17) {
-        for (int k = 0; k < 4; k++) {
-          // The slot time from the API is HH:MM
-          final slotTime = hour.substring(0, 3) + slotMinutes[k];
-          final isFilled = slots[slotTime]?['filled'] ?? false;
-
-          if (isFilled) {
-            // If a slot is marked as 'filled' in the API, we mark the *first task's* // box (j=0) as checked to satisfy the frontend's data structure,
-            // as we don't have task-specific completion history here.
-            final key = "$dateKey-$scheduleIndex-0-$k";
-            _checkedState[key] = true;
-          }
-        }
-      }
-    });
-
-    // Force UI update with the new data
-    if (mounted) setState(() {});
-  }
 
   Future<void> _saveCheckedState() async {
     // Only save keys that belong to the current day
