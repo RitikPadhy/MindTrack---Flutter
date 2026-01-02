@@ -61,13 +61,27 @@ class ContentPage3State extends State<ContentPage3> {
   @override
   void initState() {
     super.initState();
-    _initPrefsAndLoad();
+    debugPrint("DEBUG: ContentPage3 initState() called");
+    // Use post-frame callback to ensure widget is fully built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint("DEBUG: ContentPage3 post-frame callback executed");
+      _initPrefsAndLoad();
+    });
   }
 
   Future<void> _initPrefsAndLoad() async {
-    _prefs = await SharedPreferences.getInstance();
-    await _loadUserProfile(); // Load gender from local storage
-    await _loadDataForSelectedDay();
+    debugPrint("DEBUG: _initPrefsAndLoad() started");
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      debugPrint("DEBUG: SharedPreferences initialized");
+      await _loadUserProfile(); // Load gender from local storage
+      debugPrint("DEBUG: User profile loaded, about to load data for selected day");
+      await _loadDataForSelectedDay();
+      debugPrint("DEBUG: _initPrefsAndLoad() completed");
+    } catch (e, stackTrace) {
+      debugPrint("ERROR: Exception in _initPrefsAndLoad(): $e");
+      debugPrint("ERROR: Stack trace: $stackTrace");
+    }
   }
 
   // Only reads the user gender from SharedPreferences (local storage)
