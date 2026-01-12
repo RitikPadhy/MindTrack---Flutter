@@ -1,13 +1,11 @@
 // auth_page.dart (Updated for UID login)
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mind_track/pages/main/main_view.dart';
 import 'package:mind_track/services/api_service.dart';
 import 'package:mind_track/services/localization_service.dart';
 import 'package:mind_track/l10n/app_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -131,16 +129,7 @@ class _AuthPageState extends State<AuthPage> {
         await _api.login(uid: uid, password: oldPassword);
 
         // Get profile which includes tasks
-        final profileData = await _api.getProfile();
-
-        // Save tasks locally
-        if (profileData.containsKey('tasks')) {
-          final List<Map<String, dynamic>> fetchedTasks =
-          (profileData['tasks'] as List).cast<Map<String, dynamic>>();
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString(
-              ApiService.scheduleStorageKey, jsonEncode(fetchedTasks));
-        }
+        await _api.getProfile();
 
         if (!mounted) return;
         Navigator.of(context).pushReplacement(

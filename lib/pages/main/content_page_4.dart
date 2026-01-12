@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,7 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mind_track/l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 
-// Global instance for the plugin (common practice for simplicity)
+// Global notifications instance
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
 
@@ -17,18 +18,18 @@ class ContentPage4 extends StatefulWidget {
 }
 
 class _ContentPage4State extends State<ContentPage4> {
-  // 🎚️ Sliders’ state values (0–100)
+  // 🎚️ Slider states
   double energy = 0;
   double satisfaction = 0;
   double happiness = 0;
   double proud = 0;
   double busy = 0;
 
-  // ✅ NEW: Text feedback state and controller
+  // ✅ Feedback text
   String feedbackText = "";
   final TextEditingController _feedbackController = TextEditingController();
 
-  // 🗓️ State & Storage Keys
+  // 🗓️ SharedPreferences & API
   DateTime? _createdAt;
   late SharedPreferences _prefs;
   final ApiService _api = ApiService();
@@ -36,202 +37,154 @@ class _ContentPage4State extends State<ContentPage4> {
   static const String _createdAtStorageKey = 'user_created_at';
   static const String _lastFeedbackSyncDateKey = 'last_feedback_sync_date';
 
-  // 🔑 Keys for the five slider values
+  // Slider keys
   static const String _energyKey = 'feedback_energy';
   static const String _satisfactionKey = 'feedback_satisfaction';
   static const String _happinessKey = 'feedback_happiness';
   static const String _proudKey = 'feedback_proud';
   static const String _busyKey = 'feedback_busy';
-  // ✅ NEW: Key for the feedback text
   static const String _feedbackTextKey = 'feedback_text';
 
+  Timer? _weeklyTimer;
 
   @override
   void initState() {
     super.initState();
     _initializeNotifications();
     _initPrefsAndLoad();
-    // ✅ NEW: Add listener to update state when text field changes
     _feedbackController.addListener(_updateFeedbackText);
+
+    // 🔄 Periodic weekly check every minute
+    _weeklyTimer = Timer.periodic(const Duration(minutes: 1), (_) async {
+      await _checkAndSyncFeedback();
+    });
   }
 
-  // ✅ NEW: Dispose the controller and remove the listener
   @override
   void dispose() {
     _feedbackController.removeListener(_updateFeedbackText);
     _feedbackController.dispose();
+    _weeklyTimer?.cancel();
     super.dispose();
   }
 
-  // ✅ NEW: Listener function
   void _updateFeedbackText() {
     final newText = _feedbackController.text;
     if (feedbackText != newText) {
-      setState(() {
-        feedbackText = newText;
-      });
-      // Immediately save the text input
-      _saveFeedbackText(newText);
+      setState(() => feedbackText = newText);
+      _prefs.setString(_feedbackTextKey, newText);
     }
   }
 
-
-  // --- Notification Initialization (omitted for brevity, no changes here) ---
-
+  // ---------------- Notifications ----------------
   Future<void> _initializeNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
+    const AndroidInitializationSettings androidSettings =
     AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const DarwinInitializationSettings initializationSettingsDarwin =
+    const DarwinInitializationSettings iosSettings =
     DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false);
 
-    const InitializationSettings initializationSettings = InitializationSettings(
-        android: initializationSettingsAndroid,
-        iOS: initializationSettingsDarwin);
+    const InitializationSettings settings =
+    InitializationSettings(android: androidSettings, iOS: iosSettings);
 
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(settings);
   }
 
-  // 🔔 NEW: Method to show the notification (omitted for brevity, no changes here)
   Future<void> _showCompletionNotification(int weekNumber) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+    const AndroidNotificationDetails androidDetails =
     AndroidNotificationDetails(
-      'weekly_feedback_channel', // Channel ID
-      'Weekly Feedback Notifications', // Channel Name
-      channelDescription: 'Notifications for successful weekly feedback submissions.',
+      'weekly_feedback_channel',
+      'Weekly Feedback Notifications',
+      channelDescription: 'Notifications for weekly feedback submissions.',
       importance: Importance.high,
       priority: Priority.high,
       ticker: 'ticker',
     );
 
-    const NotificationDetails platformChannelSpecifics =
-    NotificationDetails(android: androidPlatformChannelSpecifics);
+    const NotificationDetails platformDetails =
+    NotificationDetails(android: androidDetails);
 
     await flutterLocalNotificationsPlugin.show(
       0,
       AppLocalizations.of(context).translate('feedback_complete'),
       '${AppLocalizations.of(context).translate('thanks_for_feedback')} $weekNumber ${AppLocalizations.of(context).translate('successfully_saved')}',
-      platformChannelSpecifics,
+      platformDetails,
       payload: 'feedback_synced',
     );
   }
 
-  // --- Core Initialization and Loading ---
-
+  // ---------------- Initialization ----------------
   Future<void> _initPrefsAndLoad() async {
     _prefs = await SharedPreferences.getInstance();
     await _loadCreatedAt();
-    await _checkAndSyncFeedback(); // CRITICAL: Check for rollover and sync before loading
     await _loadSliderValues();
-    await _loadFeedbackText(); // ✅ NEW: Load feedback text
-    // After loading, force UI update to show correct week range
-    if(mounted) setState(() {});
+    await _loadFeedbackText();
+    await _checkAndSyncFeedback(); // Immediately check if a week ended
+    if (mounted) setState(() {});
   }
 
-  // 🚀 Method to load the createdAt timestamp (omitted for brevity, no changes here)
   Future<void> _loadCreatedAt() async {
-    final storedCreatedAtString = _prefs.getString(_createdAtStorageKey);
-    DateTime? loadedDate;
-
-    if (storedCreatedAtString != null) {
-      final timestamp = int.tryParse(storedCreatedAtString);
-
-      if (timestamp != null && timestamp > 0) {
-        final fullDate = DateTime.fromMillisecondsSinceEpoch(timestamp);
-        // Normalize loaded date to the start of the day (00:00:00)
-        loadedDate = DateTime(fullDate.year, fullDate.month, fullDate.day);
+    final storedCreatedAt = _prefs.getString(_createdAtStorageKey);
+    if (storedCreatedAt != null) {
+      final ts = int.tryParse(storedCreatedAt);
+      if (ts != null && ts > 0) {
+        final fullDate = DateTime.fromMillisecondsSinceEpoch(ts);
+        _createdAt = DateTime(fullDate.year, fullDate.month, fullDate.day);
       }
     }
-    _createdAt = loadedDate;
   }
 
-  // 💾 Method to load slider values from SharedPreferences (omitted for brevity, no changes here)
   Future<void> _loadSliderValues() async {
-    final double loadedEnergy = _prefs.getDouble(_energyKey) ?? 0.0;
-    final double loadedSatisfaction = _prefs.getDouble(_satisfactionKey) ?? 0.0;
-    final double loadedHappiness = _prefs.getDouble(_happinessKey) ?? 0.0;
-    final double loadedProud = _prefs.getDouble(_proudKey) ?? 0.0;
-    final double loadedBusy = _prefs.getDouble(_busyKey) ?? 0.0;
-
-    if (mounted) {
-      setState(() {
-        energy = loadedEnergy;
-        satisfaction = loadedSatisfaction;
-        happiness = loadedHappiness;
-        proud = loadedProud;
-        busy = loadedBusy;
-      });
-    }
+    setState(() {
+      energy = _prefs.getDouble(_energyKey) ?? 0;
+      satisfaction = _prefs.getDouble(_satisfactionKey) ?? 0;
+      happiness = _prefs.getDouble(_happinessKey) ?? 0;
+      proud = _prefs.getDouble(_proudKey) ?? 0;
+      busy = _prefs.getDouble(_busyKey) ?? 0;
+    });
   }
 
-  // ✅ NEW: Load feedback text
   Future<void> _loadFeedbackText() async {
-    final String loadedText = _prefs.getString(_feedbackTextKey) ?? "";
-    if (mounted) {
-      setState(() {
-        feedbackText = loadedText;
-        _feedbackController.text = loadedText; // Set the controller's text
-      });
-    }
+    final text = _prefs.getString(_feedbackTextKey) ?? "";
+    setState(() {
+      feedbackText = text;
+      _feedbackController.text = text;
+    });
   }
 
-  // 📝 Method to save a single slider value (omitted for brevity, no changes here)
-  Future<void> _saveSliderValue(String key, double value) async {
-    await _prefs.setDouble(key, value);
-  }
-
-  // ✅ NEW: Method to save feedback text
-  Future<void> _saveFeedbackText(String value) async {
-    await _prefs.setString(_feedbackTextKey, value);
-  }
-
-
-  // --- Weekly Sync and Reset Logic (omitted for brevity, no changes to Week calculation) ---
-
+  // ---------------- Weekly Logic ----------------
   int _calculateWeekNumber(DateTime startDate) {
-    final DateTime today = DateTime.now();
-    final DateTime startOfDayToday = DateTime(today.year, today.month, today.day);
-
-    final int daysSinceStart = startOfDayToday.difference(startDate).inDays;
-
-    final int weekIndex = (daysSinceStart / 7).floor();
-
+    final today = DateTime.now();
+    final daysSinceStart = DateTime(today.year, today.month, today.day)
+        .difference(startDate)
+        .inDays;
+    final weekIndex = (daysSinceStart / 7).floor();
     return (weekIndex % 4) + 1;
   }
 
-  DateTime _calculateNextResetTime(DateTime startDate) {
-    final DateTime today = DateTime.now();
-    final DateTime startOfToday = DateTime(today.year, today.month, today.day);
-
-    final int daysSinceStart = startOfToday.difference(startDate).inDays;
-
-    final int currentWeekIndex = (daysSinceStart / 7).floor();
-
-    final DateTime nextWeekStartDate = startDate.add(Duration(days: (currentWeekIndex + 1) * 7));
-
-    return nextWeekStartDate;
+  DateTime _calculateNextWeekStart(DateTime startDate) {
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final weekIndex = (startOfToday.difference(startDate).inDays / 7).floor();
+    return startDate.add(Duration(days: (weekIndex + 1) * 7));
   }
 
-  // CRITICAL: Checks if the week has ended and performs sync/reset
   Future<void> _checkAndSyncFeedback() async {
     if (_createdAt == null) return;
 
-    final DateTime nextResetTime = _calculateNextResetTime(_createdAt!);
-    final DateTime now = DateTime.now();
+    final nextWeekStart = _calculateNextWeekStart(_createdAt!);
+    final now = DateTime.now();
 
-    // Check if we have passed the weekly midnight reset time
-    if (now.isAfter(nextResetTime)) {
-
-      final DateTime lastWeekStartDate = _createdAt!.add(Duration(days: ((now.difference(_createdAt!).inDays / 7).floor() - 1) * 7));
-      final int weekNumberToSync = _calculateWeekNumber(lastWeekStartDate);
+    // Only sync if the week ended
+    if (now.isAfter(nextWeekStart)) {
+      final weekNumberToSync = _calculateWeekNumber(
+        _createdAt!.add(
+            Duration(days: ((now.difference(_createdAt!).inDays / 7).floor() - 1) * 7)),
+      );
 
       try {
-        // 1. CALL API (Save current slider values for the week that just ended)
-        // ✅ UPDATED: Include feedbackText
         await _api.updateWeeklyFeedback(
           weekNumber: weekNumberToSync,
           energyLevels: energy,
@@ -239,111 +192,93 @@ class _ContentPage4State extends State<ContentPage4> {
           happiness: happiness,
           proudOfAchievements: proud,
           howBusy: busy,
-          feedbackText: feedbackText, // ✅ NEW PARAMETER
+          feedbackText: feedbackText,
         );
 
-        // 2. RESET LOCAL DATA
         await _resetLocalFeedback();
 
-        // 3. Update sync date marker
-        await _prefs.setString(_lastFeedbackSyncDateKey, now.toIso8601String());
-
-        if (!mounted) return; // ✅ Ensure safe before using context
-
-        // Re-load to update UI with reset values
-        await _loadSliderValues();
-        await _loadFeedbackText(); // ✅ NEW: Reload (which sets to empty string/resets controller)
+        await _prefs.setString(
+            _lastFeedbackSyncDateKey, now.toIso8601String());
 
         _showCompletionNotification(weekNumberToSync);
 
-        // ✅ Only show SnackBar if widget still exists
         if (mounted) {
           final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${l10n.translate('feedback_saved')} $weekNumberToSync ${l10n.translate('saved_and_reset')}')),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(
+                  '${l10n.translate('feedback_saved')} $weekNumberToSync ${l10n.translate('saved_and_reset')}')));
         }
-
       } catch (e) {
         if (mounted) {
           final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${l10n.translate('failed_to_sync')} ${e.toString()}${l10n.translate('local_data_retained')}')),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(
+                  '${l10n.translate('failed_to_sync')} ${e.toString()} ${l10n.translate('local_data_retained')}')));
         }
       }
     }
   }
 
-  // 📝 Resets the 5 slider values back to 0 in SharedPreferences
-  // ✅ UPDATED: Include feedback text reset
   Future<void> _resetLocalFeedback() async {
-    await _prefs.setDouble(_energyKey, 0.0);
-    await _prefs.setDouble(_satisfactionKey, 0.0);
-    await _prefs.setDouble(_happinessKey, 0.0);
-    await _prefs.setDouble(_proudKey, 0.0);
-    await _prefs.setDouble(_busyKey, 0.0);
-    await _prefs.setString(_feedbackTextKey, ""); // ✅ NEW: Reset feedback text
+    await _prefs.setDouble(_energyKey, 0);
+    await _prefs.setDouble(_satisfactionKey, 0);
+    await _prefs.setDouble(_happinessKey, 0);
+    await _prefs.setDouble(_proudKey, 0);
+    await _prefs.setDouble(_busyKey, 0);
+    await _prefs.setString(_feedbackTextKey, "");
+    await _loadSliderValues();
+    await _loadFeedbackText();
   }
 
-  // --- Slider Handlers (omitted for brevity, no changes here) ---
-
+  // ---------------- Slider Handlers ----------------
   void _updateEnergy(double v) {
     setState(() => energy = v);
-    _saveSliderValue(_energyKey, v);
+    _prefs.setDouble(_energyKey, v);
   }
 
   void _updateSatisfaction(double v) {
     setState(() => satisfaction = v);
-    _saveSliderValue(_satisfactionKey, v);
+    _prefs.setDouble(_satisfactionKey, v);
   }
 
   void _updateHappiness(double v) {
     setState(() => happiness = v);
-    _saveSliderValue(_happinessKey, v);
+    _prefs.setDouble(_happinessKey, v);
   }
 
   void _updateProud(double v) {
     setState(() => proud = v);
-    _saveSliderValue(_proudKey, v);
+    _prefs.setDouble(_proudKey, v);
   }
 
   void _updateBusy(double v) {
     setState(() => busy = v);
-    _saveSliderValue(_busyKey, v);
+    _prefs.setDouble(_busyKey, v);
   }
 
-  // --- Build Method (omitted for brevity, only the children list is relevant) ---
-
+  // ---------------- Build UI ----------------
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    DateTime now = DateTime.now();
-    String weekRange;
-    String creationDate;
+    final now = DateTime.now();
+
+    String weekRange = 'Loading week range...';
+    String creationDate = 'Loading member status...';
 
     if (_createdAt != null) {
-      final DateTime startDate = _createdAt!;
+      final startDate = _createdAt!;
+      final daysSinceStart = DateTime(now.year, now.month, now.day)
+          .difference(startDate)
+          .inDays;
+      final currentWeekIndex = (daysSinceStart / 7).floor();
+      final weekStart = startDate.add(Duration(days: currentWeekIndex * 7));
+      final weekEnd = weekStart.add(const Duration(days: 6));
 
-      final DateTime today = DateTime(now.year, now.month, now.day);
-      final int daysSinceStart = today.difference(startDate).inDays;
-
-      final int currentWeekIndex = (daysSinceStart / 7).floor();
-
-      // The start and end dates for the current week block
-      final DateTime weekStartDate = startDate.add(Duration(days: currentWeekIndex * 7));
-      final DateTime weekEndDate = weekStartDate.add(const Duration(days: 6));
-
-      weekRange = '${DateFormat('d MMMM').format(weekStartDate)} – ${DateFormat('d MMMM').format(weekEndDate)}';
-
-      creationDate = '${l10n.translate('member_since')} ${DateFormat('MMMM d, yyyy').format(_createdAt!)} | ${l10n.translate('week')} ${_calculateWeekNumber(startDate)}';
-
-
-    } else {
-      weekRange = 'Loading week range...';
-      creationDate = 'Loading member status...';
+      weekRange =
+      '${DateFormat('d MMMM').format(weekStart)} – ${DateFormat('d MMMM').format(weekEnd)}';
+      creationDate =
+      '${l10n.translate('member_since')} ${DateFormat('MMMM d, yyyy').format(_createdAt!)} | ${l10n.translate('week')} ${_calculateWeekNumber(startDate)}';
     }
-
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -353,7 +288,6 @@ class _ContentPage4State extends State<ContentPage4> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header Container
               Container(
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(20),
@@ -365,51 +299,42 @@ class _ContentPage4State extends State<ContentPage4> {
                   l10n.translate('weekly_feedback'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Creation Date Display
               Text(
                 creationDate,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade700,
-                ),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade700),
               ),
               const SizedBox(height: 8),
-
-              // Dynamic Week Range (Calculated relative to _createdAt)
               Text(
                 weekRange,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xA6000000),
-                ),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xA6000000)),
               ),
-
               const SizedBox(height: 16),
-
-              // 🎚️ Interactive Progress Bars
-              _buildInteractiveBar(l10n.translate('energy_levels'), energy, _updateEnergy),
-              _buildInteractiveBar(l10n.translate('satisfaction'), satisfaction, _updateSatisfaction),
-              _buildInteractiveBar(l10n.translate('happiness'), happiness, _updateHappiness),
-              _buildInteractiveBar(l10n.translate('proud_of_achievements'), proud, _updateProud),
-              _buildInteractiveBar(l10n.translate('how_busy'), busy, _updateBusy),
-
+              _buildInteractiveBar(
+                  l10n.translate('energy_levels'), energy, _updateEnergy),
+              _buildInteractiveBar(
+                  l10n.translate('satisfaction'), satisfaction, _updateSatisfaction),
+              _buildInteractiveBar(
+                  l10n.translate('happiness'), happiness, _updateHappiness),
+              _buildInteractiveBar(
+                  l10n.translate('proud_of_achievements'), proud, _updateProud),
+              _buildInteractiveBar(
+                  l10n.translate('how_busy'), busy, _updateBusy),
               const SizedBox(height: 16),
-
-              // ✅ NEW: Feedback Text Box
               _buildFeedbackTextBox(),
-
               const SizedBox(height: 30),
             ],
           ),
@@ -418,7 +343,6 @@ class _ContentPage4State extends State<ContentPage4> {
     );
   }
 
-  // 🧱 Reusable widget for each feedback slider (omitted for brevity, no changes here)
   Widget _buildInteractiveBar(
       String label, double value, ValueChanged<double> onChanged) {
     return Container(
@@ -439,16 +363,10 @@ class _ContentPage4State extends State<ContentPage4> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Color(0xA6000000),
-            ),
-          ),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xA6000000))),
           const SizedBox(height: 15),
-
           SliderTheme(
             data: SliderThemeData(
               activeTrackColor: Colors.lightGreen,
@@ -457,32 +375,23 @@ class _ContentPage4State extends State<ContentPage4> {
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
               thumbColor: Colors.lightGreen,
-              overlayColor: Colors.lightGreen.withValues(alpha: 0.2),
-
-              // 🚫 Disable the floating value label
+              overlayColor: Colors.lightGreen.withOpacity(0.2),
               showValueIndicator: ShowValueIndicator.never,
             ),
             child: Slider(
               value: value,
               min: 0,
               max: 100,
-              divisions: 5, // 0–5 steps
+              divisions: 5,
               onChanged: onChanged,
             ),
           ),
-
-          // ✅ Number labels below slider (0–5)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(
-                6,
-                    (i) => Text(
-                  '$i',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ),
+              children:
+              List.generate(6, (i) => Text('$i', style: const TextStyle(fontSize: 12, color: Colors.grey))),
             ),
           ),
         ],
@@ -490,7 +399,6 @@ class _ContentPage4State extends State<ContentPage4> {
     );
   }
 
-  // ✅ NEW: Widget for the text input box
   Widget _buildFeedbackTextBox() {
     final l10n = AppLocalizations.of(context);
     return Container(
@@ -511,14 +419,9 @@ class _ContentPage4State extends State<ContentPage4> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.translate('weekly_feedback'),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Color(0xA6000000),
-            ),
-          ),
+          Text(l10n.translate('weekly_feedback'),
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xA6000000))),
           const SizedBox(height: 15),
           TextField(
             controller: _feedbackController,
@@ -527,13 +430,11 @@ class _ContentPage4State extends State<ContentPage4> {
             decoration: InputDecoration(
               hintText: l10n.translate('any_thoughts'),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300)),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.lightGreen, width: 2),
-              ),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.lightGreen, width: 2)),
               contentPadding: const EdgeInsets.all(12),
             ),
             keyboardType: TextInputType.multiline,

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:mind_track/l10n/app_localizations.dart';
-import '../../services/api_service_2.dart';
+import '../../services/api_service.dart';
+import 'dart:math';
 
 class ContentPage2 extends StatefulWidget {
   const ContentPage2({super.key});
@@ -22,6 +23,22 @@ class _ContentPage2State extends State<ContentPage2> {
   void initState() {
     super.initState();
     _fetchProgress(); // Fetch initial data
+  }
+
+  String getTopTaskMessage(Map<String, dynamic> topTask, AppLocalizations l10n) {
+    if (topTask['percentage_done'] == null || topTask['percentage_done'] <= 0) {
+      return l10n.translate('keep_logging');
+    }
+
+    final String taskName = topTask['task'];
+    final List<String> messages = [
+      '${l10n.translate('great_work_1')} $taskName',
+      '${l10n.translate('great_work_2')} $taskName',
+      '${l10n.translate('great_work_3')} $taskName',
+    ];
+
+    final random = Random();
+    return messages[random.nextInt(messages.length)];
   }
 
   // --- Data Fetching Logic ---
@@ -167,7 +184,7 @@ class _ContentPage2State extends State<ContentPage2> {
                   ),
                   child: Text(
                     _topTasks.first['percentage_done'] > 0
-                        ? '${l10n.translate('great_work')} ${_topTasks.first['task']}${l10n.translate('and_staying_consistent')}'
+                        ? getTopTaskMessage(_topTasks.first, l10n)
                         : l10n.translate('keep_logging'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(

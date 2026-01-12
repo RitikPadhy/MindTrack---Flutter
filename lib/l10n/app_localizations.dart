@@ -64,8 +64,9 @@ class AppLocalizations {
       'month': 'MONTH',
       'start_doing_tasks': 'Start doing the tasks or try logging some progress to see your top statistics here!',
       'failed_to_load': 'Failed to load data. Please check your connection.',
-      'great_work': 'Great work! You are focusing on',
-      'and_staying_consistent': ', and staying consistent.',
+      'great_work_1': 'Good progress! You stayed engaged in',
+      'great_work_2': 'Good effort! This week, you focused on',
+      'great_work_3': 'You strengthened your routine through engaging in',
       'keep_logging': 'Keep logging your tasks to see personalized insights here!',
       
       // Content Page 3 - Daily Schedule
@@ -180,8 +181,9 @@ class AppLocalizations {
       'month': 'महीना',
       'start_doing_tasks': 'कार्य करना शुरू करें या अपने शीर्ष आंकड़े यहां देखने के लिए कुछ प्रगति लॉग करने का प्रयास करें!',
       'failed_to_load': 'डेटा लोड करने में विफल। कृपया अपना कनेक्शन जांचें।',
-      'great_work': 'बढ़िया काम! आप ध्यान केंद्रित कर रहे हैं',
-      'and_staying_consistent': ', और निरंतर बने हुए हैं।',
+      'great_work_1': 'अच्छी प्रगति! आप इसमें लगे रहे',
+      'great_work_2': 'अच्छा प्रयास! इस सप्ताह, आप इस पर ध्यान केंद्रित कर रहे थे',
+      'great_work_3': 'आपने इसमें लगे रहने के माध्यम से अपनी दिनचर्या को मजबूत किया',
       'keep_logging': 'यहां व्यक्तिगत अंतर्दृष्टि देखने के लिए अपने कार्यों को लॉग करते रहें!',
       
       // Content Page 3 - Daily Schedule
@@ -296,8 +298,9 @@ class AppLocalizations {
       'month': 'ತಿಂಗಳು',
       'start_doing_tasks': 'ಕಾರ್ಯಗಳನ್ನು ಮಾಡಲು ಪ್ರಾರಂಭಿಸಿ ಅಥವಾ ನಿಮ್ಮ ಉನ್ನತ ಅಂಕಿಅಂಶಗಳನ್ನು ಇಲ್ಲಿ ನೋಡಲು ಕೆಲವು ಪ್ರಗತಿಯನ್ನು ಲಾಗ್ ಮಾಡಲು ಪ್ರಯತ್ನಿಸಿ!',
       'failed_to_load': 'ಡೇಟಾ ಲೋಡ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ.',
-      'great_work': 'ಉತ್ತಮ ಕೆಲಸ! ನೀವು ಗಮನ ಹರಿಸುತ್ತಿದ್ದೀರಿ',
-      'and_staying_consistent': ', ಮತ್ತು ಸ್ಥಿರವಾಗಿರುತ್ತಿದ್ದೀರಿ.',
+      'great_work_1': 'ಒಳ್ಳೆಯ ಪ್ರಗತಿ! ನೀವು ಇದರಲ್ಲಿ ತೊಡಗಿಸಿಕೊಂಡಿದ್ದೀರಿ',
+      'great_work_2': 'ಒಳ್ಳೆಯ ಪ್ರಯತ್ನ! ಈ ವಾರ, ನೀವು ಇದರಲ್ಲಿ ಗಮನ ಹರಿಸಿದ್ದೀರಿ',
+      'great_work_3': 'ನೀವು ಇದರಲ್ಲಿ ತೊಡಗಿಸಿಕೊಂಡು ನಿಮ್ಮ ರೂಟೀನ್ ಅನ್ನು ಬಲಪಡಿಸಿದ್ದೀರಿ',
       'keep_logging': 'ವೈಯಕ್ತಿಕ ಒಳನೋಟಗಳನ್ನು ಇಲ್ಲಿ ನೋಡಲು ನಿಮ್ಮ ಕಾರ್ಯಗಳನ್ನು ಲಾಗ್ ಮಾಡುತ್ತಲೇ ಇರಿ!',
       
       // Content Page 3 - Daily Schedule
@@ -412,7 +415,9 @@ class AppLocalizations {
       'month': 'മാസം',
       'start_doing_tasks': 'ജോലികൾ ചെയ്യാൻ തുടങ്ങുക അല്ലെങ്കിൽ നിങ്ങളുടെ മികച്ച സ്ഥിതിവിവരക്കണക്കുകൾ ഇവിടെ കാണാൻ കുറച്ച് പുരോഗതി ലോഗ് ചെയ്യാൻ ശ്രമിക്കുക!',
       'failed_to_load': 'ഡാറ്റ ലോഡ് ചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു. ദയവായി നിങ്ങളുടെ കണക്ഷൻ പരിശോധിക്കുക.',
-      'great_work': 'മികച്ച പ്രവർത്തനം! നിങ്ങൾ ശ്രദ്ധ കേന്ദ്രീകരിക്കുന്നു',
+      'great_work_1': 'നല്ല പുരോഗതി! നിങ്ങൾ ഇതിൽ താൽപ്പര്യം പുലർത്തി',
+      'great_work_2': 'നല്ല ശ്രമം! ഈ ആഴ്ച, നിങ്ങൾ ഇതിൽ ശ്രദ്ധ കേന്ദ്രീകരിച്ചു',
+      'great_work_3': 'നിങ്ങൾ ഇതിൽ താൽപ്പര്യം പുലർത്തിയത് വഴി നിങ്ങളുടെ റൂട്ടീൻ ശക്തമാക്കി',
       'and_staying_consistent': ', കൂടാതെ സ്ഥിരത പാലിക്കുന്നു.',
       'keep_logging': 'വ്യക്തിഗത ഉൾക്കാഴ്ചകൾ ഇവിടെ കാണാൻ നിങ്ങളുടെ ജോലികൾ ലോഗ് ചെയ്യുന്നത് തുടരുക!',
       

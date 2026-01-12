@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mind_track/l10n/app_localizations.dart';
 import 'dart:convert';
+import '../../services/api_service.dart';
 
 class ContentPage5 extends StatefulWidget {
   const ContentPage5({super.key});
@@ -11,62 +12,110 @@ class ContentPage5 extends StatefulWidget {
 }
 
 class _ContentPage5State extends State<ContentPage5> {
-  // Structure to hold achievement data: List of maps with 'title', 'message1', 'message2'
   List<Map<String, String>> _achievements = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadAchievements();
+    _fetchAndLoadAchievements();
   }
 
-  // Loads achievements from SharedPreferences
-  Future<void> _loadAchievements() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Retrieve the list of achievement strings saved by ContentPage4
-    final List<String> achievementStrings = prefs.getStringList('weekly_achievements') ?? [];
+  /// Fetches achievements from API and updates SharedPreferences
+  Future<void> _fetchAndLoadAchievements() async {
+    setState(() => _isLoading = true);
 
-    final List<Map<String, String>> loadedAchievements = achievementStrings.map((s) {
-      final Map<String, dynamic> data = jsonDecode(s);
-      // Ensure all values are converted to string for type safety in the UI
-      return data.map((key, value) => MapEntry(key, value.toString()));
-    }).toList();
+    try {
+      final apiAchievements = await ApiService().getWeeklyAchievements();
 
-    if (mounted) {
-      setState(() {
-        _achievements = loadedAchievements.isEmpty
-            ? _getDefaultMessages(context)
-            : loadedAchievements;
-        _isLoading = false;
-      });
+      // Convert all values to String
+      final List<Map<String, String>> formatted = apiAchievements.map((item) {
+        return {
+          "title": item['title'].toString(),
+          "message1": item['message1'].toString(),
+          "message2": item['message2'].toString(),
+        };
+      }).toList();
+
+      // Save to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setStringList(
+        'weekly_achievements',
+        formatted.map((m) => jsonEncode(m)).toList(),
+      );
+
+      if (mounted) {
+        setState(() {
+          _achievements = formatted;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error fetching achievements: $e");
+
+      // Load cached achievements if API fails
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> cached = prefs.getStringList('weekly_achievements') ?? [];
+
+      if (mounted) {
+        setState(() {
+          _achievements = cached.map((s) {
+            final Map<String, dynamic> data = jsonDecode(s);
+            return data.map((key, value) => MapEntry(key, value.toString()));
+          }).toList();
+
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  // Default messages for the initial state before the first weekly sync
+  String _getEmojiForTitle(String title) {
+    const Map<String, String> emojiMap = {
+      "Habit Hero": "🏆",
+      "Steady Steps": "🏆",
+      "Daily Rhythm Builder": "🏆",
+      "Whole-Self Nurturer": "🌱",
+      "Life Balance Seeker": "🌱",
+      "Explorer of Routines": "🌱",
+      "Time Alchemist": "⏳",
+      "Purposeful Hours": "⏳",
+      "Mindful Moments": "⏳",
+    };
+    return emojiMap.entries.firstWhere(
+          (e) => title.contains(e.key),
+      orElse: () => MapEntry("", "⭐"),
+    ).value;
+  }
+
   List<Map<String, String>> _getDefaultMessages(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return [
-      {"title": l10n.translate('mind_track_welcome'), "message1": l10n.translate('check_back_after_sync'), "message2": l10n.translate('achievements_appear_here')},
-      {"title": l10n.translate('consistency_goal'), "message1": l10n.translate('keep_tracking'), "message2": l10n.translate('tiny_actions')},
-      {"title": l10n.translate('variety_goal'), "message1": l10n.translate('explore_activities'), "message2": l10n.translate('aim_for_variety')}
+      {
+        "title": l10n.translate('mind_track_welcome'),
+        "message1": l10n.translate('check_back_after_sync'),
+        "message2": l10n.translate('achievements_appear_here')
+      },
+      {
+        "title": l10n.translate('consistency_goal'),
+        "message1": l10n.translate('keep_tracking'),
+        "message2": l10n.translate('tiny_actions')
+      },
+      {
+        "title": l10n.translate('variety_goal'),
+        "message1": l10n.translate('explore_activities'),
+        "message2": l10n.translate('aim_for_variety')
+      }
     ];
-  }
-
-  // Helper to map the achievement type to a relevant emoji
-  String _getEmojiForTitle(String title) {
-    if (title.contains('Hero') || title.contains('Steady') || title.contains('Rhythm')) return '🏆'; // Consistency
-    if (title.contains('Balance') || title.contains('Explorer') || title.contains('Nurturer')) return '🌱'; // Variety
-    if (title.contains('Time') || title.contains('Mindful') || title.contains('Purposeful')) return '⏳'; // Time Spent
-    return '⭐';
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final Map<String, String> mainAchievement = _achievements.isNotEmpty
-        ? _achievements[0]
-        : _getDefaultMessages(context)[0];
+    final List<Map<String, String>> achievementsToShow =
+    _achievements.isNotEmpty ? _achievements : _getDefaultMessages(context);
+
+    final Map<String, String> mainAchievement = achievementsToShow[0];
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -97,10 +146,9 @@ class _ContentPage5State extends State<ContentPage5> {
 
               const SizedBox(height: 20),
 
-              // Loading/Congratulations Card
+              // Loading / Congratulations
               Container(
-                padding:
-                const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -114,9 +162,7 @@ class _ContentPage5State extends State<ContentPage5> {
                   ],
                 ),
                 child: Text(
-                  _isLoading
-                      ? l10n.translate('fetching_report')
-                      : l10n.translate('congratulations'),
+                  _isLoading ? l10n.translate('fetching_report') : l10n.translate('congratulations'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 16,
@@ -128,7 +174,7 @@ class _ContentPage5State extends State<ContentPage5> {
 
               const SizedBox(height: 20),
 
-              // 🏆 Achievement Celebration Section (Dynamic Content)
+              // Main Achievement Circle
               Center(
                 child: Container(
                   height: 250,
@@ -142,7 +188,7 @@ class _ContentPage5State extends State<ContentPage5> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.withValues(alpha: 0.3),
+                        color: Colors.blue.withOpacity(0.3),
                         blurRadius: 25,
                         spreadRadius: 5,
                       ),
@@ -160,7 +206,6 @@ class _ContentPage5State extends State<ContentPage5> {
                             color: Colors.yellowAccent,
                           ),
                           const SizedBox(height: 10),
-                          // TITLE FROM API
                           Text(
                             mainAchievement['title']!,
                             textAlign: TextAlign.center,
@@ -171,13 +216,12 @@ class _ContentPage5State extends State<ContentPage5> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          // MESSAGE 1 FROM API
                           Text(
                             mainAchievement['message1']!,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: Colors.white.withOpacity(0.9),
                               height: 1.4,
                             ),
                           ),
@@ -190,12 +234,10 @@ class _ContentPage5State extends State<ContentPage5> {
 
               const SizedBox(height: 30),
 
-              // ✅ Achievement Boxes (Dynamically generated using message2)
-              // This section uses the three items fetched from the API.
-              ..._achievements.asMap().entries.map((entry) {
+              // Other Achievements
+              ...achievementsToShow.asMap().entries.map((entry) {
                 final index = entry.key;
                 final achievement = entry.value;
-
                 if (index == 0) return const SizedBox.shrink();
 
                 return _buildAchievementMessage(
@@ -205,9 +247,8 @@ class _ContentPage5State extends State<ContentPage5> {
                 );
               }),
 
-              // If less than 3 achievements (only the main one is shown in the list),
-              // and we are not loading, show a static encouraging message.
-              if (!_isLoading && _achievements.length < 2)
+              // Encourage if less than 3 achievements
+              if (!_isLoading && achievementsToShow.length < 2)
                 _buildAchievementMessage(
                   emoji: '👍',
                   title: l10n.translate('getting_started'),

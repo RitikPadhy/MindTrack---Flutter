@@ -7,6 +7,8 @@ import 'package:mind_track/pages/main/content_page_4.dart' as cp4;
 import 'package:mind_track/pages/main/content_page_5.dart' as cp5;
 import 'package:mind_track/services/notification_service.dart';
 import 'package:mind_track/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mind_track/pages/main/question_page.dart';
 
 class MainView extends StatefulWidget {
   const MainView({super.key});
@@ -24,8 +26,65 @@ class _MainViewState extends State<MainView> with WidgetsBindingObserver {
     super.initState();
     _setSystemNavBar(); // initial styling
     WidgetsBinding.instance.addObserver(this);
+
+    printAllPrefs();
+
+    // 1️⃣ Check for QuestionPage redirect
+    _checkQuestionPage();
+
     // Ensure notifications are scheduled when main view loads
     _ensureNotifications();
+  }
+
+  Future<void> printAllPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+
+    print("📦 SharedPreferences is:");
+
+    if (keys.isEmpty) {
+      print("📦 SharedPreferences is empty");
+      return;
+    }
+
+    for (var key in keys) {
+      final value = prefs.get(key); // could be int, bool, double, String, List<String>
+      print("🔑 $key : $value");
+    }
+  }
+
+  /// Check if user has been registered for more than 28 days
+  Future<void> _checkQuestionPage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final createdAtValue = prefs.get('user_created_at'); // could be int or String
+      int? createdAtMs;
+
+      if (createdAtValue is int) {
+        createdAtMs = createdAtValue;
+      } else if (createdAtValue is String) {
+        createdAtMs = int.tryParse(createdAtValue);
+      }
+
+      if (createdAtMs != null) {
+        final daysSinceCreated = DateTime.now()
+            .difference(DateTime.fromMillisecondsSinceEpoch(createdAtMs))
+            .inDays;
+
+        debugPrint('🕒 Days since createdAt = $daysSinceCreated');
+
+        if (daysSinceCreated > 28) {
+          debugPrint('➡️ Redirecting to QuestionPage');
+          if (!mounted) return;
+
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const QuestionPage()),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking QuestionPage redirect: $e');
+    }
   }
 
   @override

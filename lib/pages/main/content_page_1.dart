@@ -125,6 +125,9 @@ class ContentPage1 extends StatelessWidget {
   void _showSection(BuildContext context, int sectionId, String title) async {
     final api = ApiService();
 
+    // Increment view count for this user & section (non-blocking)
+    api.incrementReadingView(sectionId).catchError((_) {});
+
     // Dim system bars
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -145,7 +148,7 @@ class ContentPage1 extends StatelessWidget {
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 22,
-            fontWeight: FontWeight.w500, // lighter font weight
+            fontWeight: FontWeight.w500,
           ),
         ),
         content: FutureBuilder<Map<String, dynamic>>(
@@ -166,7 +169,7 @@ class ContentPage1 extends StatelessWidget {
               final content = snapshot.data!['material'] as String;
               return ConstrainedBox(
                 constraints: const BoxConstraints(
-                  maxHeight: 250, // limit height
+                  maxHeight: 250,
                 ),
                 child: SingleChildScrollView(
                   child: Center(

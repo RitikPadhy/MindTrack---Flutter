@@ -1,28 +1,29 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   final String baseUrl = "https://api.mindtrack.shop";
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  // Key for storing the user's tasks/schedule data
   static const String scheduleStorageKey = 'user_schedule_data';
 
-  // ---------- Login with UID ----------
+  /* -------------------------------------------------------------------------- */
+  /*                                   LOGIN                                    */
+  /* -------------------------------------------------------------------------- */
+
   Future<Map<String, dynamic>> login({
     required String uid,
     required String password,
   }) async {
-    final url = Uri.parse("$baseUrl/auth/login");
     final resp = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
+      Uri.parse("$baseUrl/auth/login"),
+      headers: const {"Content-Type": "application/json"},
       body: jsonEncode({
         "uid": uid,
         "password": password,
@@ -30,43 +31,29 @@ class ApiService {
     );
 
     if (resp.statusCode != 200) {
-      final error = _safeError(resp.body, "Login failed");
-      throw Exception(error);
+      throw Exception(_safeError(resp.body, "Login failed"));
     }
 
     final data = jsonDecode(resp.body);
     final customToken = data['custom_token'] as String;
 
-    // 🔑 Exchange custom token for Firebase ID token
-    final idToken = await _exchangeCustomToken(customToken);
+    final userCredential =
+    await FirebaseAuth.instance.signInWithCustomToken(customToken);
 
-    // Store ID token + UID securely
-    await _storage.write(key: 'access_token', value: idToken);
+    final idToken = await userCredential.user?.getIdToken(true);
+    if (idToken == null) {
+      throw Exception("Failed to retrieve Firebase ID token");
+    }
+
     await _storage.write(key: 'uid', value: uid);
 
-    debugPrint('DEBUG: ID Token saved. Length: ${idToken.length}');
-
+    debugPrint('✅ Login successful — UID: $uid');
     return data;
   }
 
-  // ---------- Exchange Custom Token for ID Token ----------
-  Future<String> _exchangeCustomToken(String customToken) async {
-    try {
-      // Ensure Firebase is initialized only once
-      await Firebase.initializeApp();
-
-      final userCredential =
-      await FirebaseAuth.instance.signInWithCustomToken(customToken);
-      final idToken = await userCredential.user?.getIdToken();
-      if (idToken == null) {
-        throw Exception("Failed to get ID token from Firebase user.");
-      }
-      return idToken;
-    } catch (e) {
-      debugPrint('ERROR: Failed to exchange custom token: $e');
-      throw Exception('Failed to authenticate with Firebase.');
-    }
-  }
+  /* -------------------------------------------------------------------------- */
+  /*                                CHANGE PASSWORD                                 */
+  /* -------------------------------------------------------------------------- */
 
   // ---------- Change Password (Set New Password via UID + Current Password) ----------
   Future<void> changePassword({
@@ -92,143 +79,193 @@ class ApiService {
     }
   }
 
-  // ---------- Auto Login ----------
+  /* -------------------------------------------------------------------------- */
+  /*                                AUTO LOGIN                                  */
+  /* -------------------------------------------------------------------------- */
+
   Future<bool> tryAutoLogin() async {
-    final token = await _storage.read(key: 'access_token');
-    final uid = await _storage.read(key: 'uid');
-    return token != null && uid != null;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+
+      await user.getIdToken(true); // force refresh if needed
+      await _storage.write(key: 'uid', value: user.uid);
+
+      debugPrint('✅ Auto-login successful for ${user.uid}');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Auto-login failed: $e');
+      return false;
+    }
   }
 
-  // ---------- Auth Headers ----------
-  Future<Map<String, String>> _authHeaders() async {
-    final token = await _storage.read(key: 'access_token');
-    if (token == null) throw Exception("Not authenticated. Access token missing.");
+  /* -------------------------------------------------------------------------- */
+  /*                               AUTH HEADERS                                 */
+  /* -------------------------------------------------------------------------- */
 
+  Future<Map<String, String>> _authHeaders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Not authenticated");
+
+    final token = await user.getIdToken();
     return {
       "Content-Type": "application/json",
       "Authorization": "Bearer $token",
     };
   }
 
-  // ---------- Get Profile ----------
-  Future<Map<String, dynamic>> getProfile() async {
-    final url = Uri.parse("$baseUrl/auth/me");
-    final headers = await _authHeaders();
+  /* -------------------------------------------------------------------------- */
+  /*                                 PROFILE                                    */
+  /* -------------------------------------------------------------------------- */
 
-    final resp = await http.get(url, headers: headers);
+  Future<Map<String, dynamic>> getProfile() async {
+    final resp = await http.get(
+      Uri.parse("$baseUrl/auth/me"),
+      headers: await _authHeaders(),
+    );
 
     if (resp.statusCode != 200) {
-      final error = _safeError(resp.body, "Failed to fetch profile");
-      throw Exception(error);
+      throw Exception(_safeError(resp.body, "Failed to fetch profile"));
     }
 
     final data = jsonDecode(resp.body);
 
-    // Save gender
-    if (data.containsKey('gender')) {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (data['gender'] != null) {
       await _storage.write(key: 'gender', value: data['gender']);
     }
 
-    // Save creation date
-    if (data.containsKey('createdAt')) {
-      final prefs = await SharedPreferences.getInstance();
+    if (data['createdAt'] != null) {
       try {
-        final createdAtDate = DateTime.parse(data['createdAt']);
-        await prefs.setString(
-            'user_created_at', createdAtDate.millisecondsSinceEpoch.toString());
+        final createdAt = DateTime.parse(data['createdAt']);
+        await prefs.setInt(
+            'user_created_at', createdAt.millisecondsSinceEpoch);
       } catch (_) {}
     }
 
-    // Save tasks
-    if (data.containsKey('tasks')) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(scheduleStorageKey, jsonEncode(data['tasks']));
+    if (data['tasks'] != null) {
+      await prefs.setString(
+          scheduleStorageKey, jsonEncode(data['tasks']));
     }
 
     return data;
   }
 
-  // ---------- Logout ----------
+  /* -------------------------------------------------------------------------- */
+  /*                                   LOGOUT                                   */
+  /* -------------------------------------------------------------------------- */
+
   Future<void> logout() async {
-    final uid = await _storage.read(key: 'uid');
-    if (uid == null) return;
+    try {
+      final uid = await _storage.read(key: 'uid');
+      if (uid != null) {
+        await http.post(
+          Uri.parse("$baseUrl/auth/logout"),
+          headers: await _authHeaders(),
+          body: jsonEncode({"uid": uid}),
+        );
+      }
+    } catch (_) {}
 
-    final url = Uri.parse("$baseUrl/auth/logout");
-    final headers =
-    await _authHeaders().catchError((_) => {"Content-Type": "application/json"});
-
-    await http.post(url, headers: headers, body: jsonEncode({"uid": uid}));
-
-    await _storage.delete(key: 'access_token');
-    await _storage.delete(key: 'uid');
-    await _storage.delete(key: 'gender');
-    await _storage.delete(key: 'token_expiry');
+    await FirebaseAuth.instance.signOut();
+    await _storage.deleteAll();
   }
 
-  // ---------- DNS Check ----------
+  /* -------------------------------------------------------------------------- */
+  /*                               NETWORK UTILS                                */
+  /* -------------------------------------------------------------------------- */
+
   Future<List<InternetAddress>> resolveApi() async {
     try {
-      final uri = Uri.parse(baseUrl);
-      final host = uri.host;
-      final addresses = await InternetAddress.lookup(host);
-      return addresses;
+      return await InternetAddress.lookup(Uri.parse(baseUrl).host);
     } on SocketException {
       return [];
     }
   }
 
-  // ---------- Get Reading Material ----------
+  /* -------------------------------------------------------------------------- */
+  /*                             READING MATERIAL                                */
+  /* -------------------------------------------------------------------------- */
+
   Future<Map<String, dynamic>> getReadingMaterial(int sectionId) async {
-    final url = Uri.parse("$baseUrl/reading/reading-material/$sectionId");
-    final resp = await http.get(url, headers: {"Content-Type": "application/json"});
+    final resp = await http.get(
+      Uri.parse("$baseUrl/reading/reading-material/$sectionId"),
+      headers: const {"Content-Type": "application/json"},
+    );
 
     if (resp.statusCode != 200) {
-      throw Exception("Failed to fetch section: ${resp.body}");
+      throw Exception("Failed to fetch reading material");
     }
 
     return jsonDecode(resp.body);
   }
 
-  // ---------- Get Day Routine ----------
-  Future<Map<String, dynamic>> getDayRoutine(String date) async {
-    final url = Uri.parse("$baseUrl/routines/get-day-routine?date=$date");
-    final headers = await _authHeaders();
+  Future<void> incrementReadingView(int sectionId) async {
+    final resp = await http.post(
+      Uri.parse("$baseUrl/reading/reading-material/$sectionId/view"),
+      headers: await _authHeaders(),
+    );
 
-    final resp = await http.get(url, headers: headers);
-
-    if (resp.statusCode == 200) {
-      return jsonDecode(resp.body);
-    } else if (resp.statusCode == 404) {
-      final error = _safeError(resp.body, "No routine found for date $date");
-      throw Exception(error);
-    } else {
-      final error = _safeError(resp.body, "Failed to fetch routine for date $date");
-      throw Exception(error);
+    if (resp.statusCode != 200) {
+      throw Exception("Failed to update reading count");
     }
   }
 
-  // ---------- Save Day Completion Granular ----------
+  /* -------------------------------------------------------------------------- */
+  /*                                ROUTINES                                    */
+  /* -------------------------------------------------------------------------- */
+
+  Future<Map<String, dynamic>> getDayRoutine(String date) async {
+    final resp = await http.get(
+      Uri.parse("$baseUrl/routines/get-day-routine?date=$date"),
+      headers: await _authHeaders(),
+    );
+
+    if (resp.statusCode == 200) {
+      return jsonDecode(resp.body);
+    }
+
+    throw Exception(_safeError(resp.body, "Routine not found"));
+  }
+
   Future<void> saveDayCompletionGranular({
     required String date,
     required Map<String, Map<String, bool>> hourSlotsStatus,
   }) async {
-    final url = Uri.parse("$baseUrl/routines/save-day");
-    final headers = await _authHeaders();
-
-    final payload = {
-      "date": date,
-      "hour_slots_status": hourSlotsStatus,
-    };
-
-    final resp = await http.post(url, headers: headers, body: jsonEncode(payload));
+    final resp = await http.patch(
+      Uri.parse("$baseUrl/routines/update-day"),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        "date": date,
+        "hour_slots_status": hourSlotsStatus,
+      }),
+    );
 
     if (resp.statusCode != 200) {
-      final error = _safeError(resp.body, "Failed to save granular day completion for $date");
-      throw Exception(error);
+      throw Exception("Failed to save routine");
     }
   }
 
-  // ---------- Update Weekly Feedback ----------
+  // ---------- Get Progress (Day / Week / Month) ----------
+  Future<Map<String, dynamic>> getProgress(String period) async {
+    final url = Uri.parse("$baseUrl/track_progress/progress/$period");
+    final headers = await _authHeaders(); // Needs valid token
+
+    final resp = await http.get(url, headers: headers);
+
+    if (resp.statusCode != 200) {
+      final error = _safeError(resp.body, "Failed to fetch progress");
+      throw Exception(error);
+    }
+
+    return jsonDecode(resp.body);
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                            WEEKLY FEEDBACK                                 */
+  /* -------------------------------------------------------------------------- */
+
   Future<void> updateWeeklyFeedback({
     required int weekNumber,
     required double energyLevels,
@@ -238,47 +275,68 @@ class ApiService {
     required double howBusy,
     String? feedbackText,
   }) async {
-    final url = Uri.parse("$baseUrl/weekly-feedback/update-week");
-    final headers = await _authHeaders();
-
-    final payload = {
-      "week_number": weekNumber,
-      "energy_levels": energyLevels,
-      "satisfaction": satisfaction,
-      "happiness": happiness,
-      "proud_of_achievements": proudOfAchievements,
-      "how_busy": howBusy,
-      "feedback_text": feedbackText,
-    };
-
-    final resp = await http.patch(url, headers: headers, body: jsonEncode(payload));
+    final resp = await http.patch(
+      Uri.parse("$baseUrl/weekly-feedback/update-week"),
+      headers: await _authHeaders(),
+      body: jsonEncode({
+        "week_number": weekNumber,
+        "energy_levels": energyLevels,
+        "satisfaction": satisfaction,
+        "happiness": happiness,
+        "proud_of_achievements": proudOfAchievements,
+        "how_busy": howBusy,
+        "feedback_text": feedbackText,
+      }),
+    );
 
     if (resp.statusCode != 200) {
-      final error = _safeError(resp.body, "Failed to update weekly feedback for week $weekNumber");
-      throw Exception(error);
+      throw Exception("Failed to update weekly feedback");
     }
   }
 
-  // ---------- Get Weekly Achievements ----------
-  Future<List<dynamic>> getWeeklyAchievements() async {
-    final url = Uri.parse("$baseUrl/messages");
-    final headers = await _authHeaders();
+  /* -------------------------------------------------------------------------- */
+  /*                             ACHIEVEMENTS                                   */
+  /* -------------------------------------------------------------------------- */
 
-    final resp = await http.get(url, headers: headers);
+  Future<List<dynamic>> getWeeklyAchievements() async {
+    final resp = await http.get(
+      Uri.parse("$baseUrl/achievements/messages"),
+      headers: await _authHeaders(),
+    );
 
     if (resp.statusCode != 200) {
-      final error = _safeError(resp.body, "Failed to load weekly achievements");
-      throw Exception(error);
+      throw Exception("Failed to load achievements");
     }
 
     return jsonDecode(resp.body);
   }
 
-  // ---------- Helper: Safe Error ----------
+  /* -------------------------------------------------------------------------- */
+  /*                                   MAUQ                                     */
+  /* -------------------------------------------------------------------------- */
+
+  Future<void> submitMAUQ(Map<String, dynamic> responses) async {
+    final resp = await http.post(
+      Uri.parse("$baseUrl/question/mauq"),
+      headers: await _authHeaders(),
+      body: jsonEncode(responses),
+    );
+
+    if (resp.statusCode != 200 && resp.statusCode != 201) {
+      throw Exception("Failed to submit MAUQ");
+    }
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                                   UTILS                                    */
+  /* -------------------------------------------------------------------------- */
+
   String _safeError(String body, String fallback) {
     try {
       final decoded = jsonDecode(body);
-      if (decoded is Map && decoded.containsKey('detail')) return decoded['detail'];
+      if (decoded is Map && decoded['detail'] != null) {
+        return decoded['detail'];
+      }
       return body;
     } catch (_) {
       return fallback;
