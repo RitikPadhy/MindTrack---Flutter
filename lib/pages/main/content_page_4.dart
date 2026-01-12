@@ -375,7 +375,7 @@ class _ContentPage4State extends State<ContentPage4> {
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
               thumbColor: Colors.lightGreen,
-              overlayColor: Colors.lightGreen.withOpacity(0.2),
+              overlayColor: Colors.lightGreen.withAlpha((0.2 * 255).round()),
               showValueIndicator: ShowValueIndicator.never,
             ),
             child: Slider(

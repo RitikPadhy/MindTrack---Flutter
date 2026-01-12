@@ -218,8 +218,8 @@ class _QuestionPageState extends State<QuestionPage> {
               inactiveTrackColor: Colors.grey.shade200,
               trackHeight: 8,
               thumbColor: Colors.lightGreen,
-              overlayColor: Colors.lightGreen.withOpacity(0.2),
-              showValueIndicator: ShowValueIndicator.always,
+              overlayColor: const Color.fromRGBO(76, 175, 80, 0.2),
+              showValueIndicator: ShowValueIndicator.onDrag,
             ),
             child: Slider(
               value: value,

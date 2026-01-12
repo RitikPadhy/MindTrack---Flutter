@@ -209,7 +209,9 @@ class ContentPage3State extends State<ContentPage3> {
         }
 
         // Clear only previous day keys after successful update
-        for (var k in prevDayKeys) _checkedState.remove(k);
+        for (var k in prevDayKeys) {
+          _checkedState.remove(k);
+        }
         await _prefs.setString(_storageKey, jsonEncode(_checkedState));
       }
     });

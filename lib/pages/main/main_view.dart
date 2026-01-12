@@ -40,16 +40,16 @@ class _MainViewState extends State<MainView> with WidgetsBindingObserver {
     final prefs = await SharedPreferences.getInstance();
     final keys = prefs.getKeys();
 
-    print("📦 SharedPreferences is:");
+    debugPrint("📦 SharedPreferences is:");
 
     if (keys.isEmpty) {
-      print("📦 SharedPreferences is empty");
+      debugPrint("📦 SharedPreferences is empty");
       return;
     }
 
     for (var key in keys) {
       final value = prefs.get(key); // could be int, bool, double, String, List<String>
-      print("🔑 $key : $value");
+      debugPrint("🔑 $key : $value");
     }
   }
 

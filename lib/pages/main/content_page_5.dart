@@ -51,7 +51,7 @@ class _ContentPage5State extends State<ContentPage5> {
         });
       }
     } catch (e) {
-      print("Error fetching achievements: $e");
+      debugPrint("Error fetching achievements: $e");
 
       // Load cached achievements if API fails
       final prefs = await SharedPreferences.getInstance();
@@ -188,7 +188,7 @@ class _ContentPage5State extends State<ContentPage5> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.withOpacity(0.3),
+                        color: Colors.blue.withAlpha((0.3 * 255).round()),
                         blurRadius: 25,
                         spreadRadius: 5,
                       ),
@@ -221,7 +221,7 @@ class _ContentPage5State extends State<ContentPage5> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withAlpha((0.9 * 255).round()) ,
                               height: 1.4,
                             ),
                           ),
