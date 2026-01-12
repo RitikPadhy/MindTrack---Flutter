@@ -63,7 +63,7 @@ class NotificationService {
       if (androidImplementation != null) {
         // Create the notification channel
         const fln.AndroidNotificationChannel channel = fln.AndroidNotificationChannel(
-          'motivational_channel_id',
+          'motivational_channel_id_v2',
           'Motivational Reminders',
           description: 'Daily positive phrases at random times.',
           importance: fln.Importance.high,
@@ -107,7 +107,7 @@ class NotificationService {
 
       const fln.NotificationDetails notificationDetails = fln.NotificationDetails(
         android: fln.AndroidNotificationDetails(
-          'motivational_channel_id',
+          'motivational_channel_id_v2',
           'Motivational Reminders',
           channelDescription: 'Daily positive phrases at random times.',
           importance: fln.Importance.high,
@@ -154,7 +154,7 @@ class NotificationService {
       rescheduleTime,
       const fln.NotificationDetails(
         android: fln.AndroidNotificationDetails(
-          'motivational_channel_id',
+          'motivational_channel_id_v2',
           'Motivational Reminders',
           channelDescription: 'Daily positive phrases at random times.',
           importance: fln.Importance.low,
@@ -195,7 +195,7 @@ class NotificationService {
   Future<void> showTestNotification() async {
     const fln.NotificationDetails notificationDetails = fln.NotificationDetails(
       android: fln.AndroidNotificationDetails(
-        'motivational_channel_id',
+        'motivational_channel_id_v2',
         'Motivational Reminders',
         channelDescription: 'Daily positive phrases at random times.',
         importance: fln.Importance.high,
