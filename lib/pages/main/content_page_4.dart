@@ -200,8 +200,19 @@ class _ContentPage4State extends State<ContentPage4> {
   // ---------------- Sync Unsynced Weeks ----------------
   Future<void> _syncAllUnsyncedWeeks() async {
     if (_createdAt == null) return;
-    final totalWeeks = _calculateWeekNumber(_createdAt!);
-    for (int week = 1; week <= totalWeeks; week++) {
+
+    final today = DateTime.now();
+    final start = DateTime(_createdAt!.year, _createdAt!.month, _createdAt!.day);
+    final daysSinceStart =
+        DateTime(today.year, today.month, today.day).difference(start).inDays;
+
+    final currentWeek = (daysSinceStart ~/ 7) + 1;
+
+    // Only weeks BEFORE the current one are eligible
+    final lastCompletedWeek = currentWeek - 1;
+    if (lastCompletedWeek < 1) return;
+
+    for (int week = 1; week <= lastCompletedWeek; week++) {
       final isSynced = _prefs.getBool(_getWeekSyncedKey(week)) ?? false;
       if (!isSynced) {
         await _syncWeek(week);

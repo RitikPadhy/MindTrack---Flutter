@@ -70,7 +70,7 @@ class _MainViewState extends State<MainView> with WidgetsBindingObserver {
 
         debugPrint('🕒 Days since createdAt = $daysSinceCreated');
 
-        if (daysSinceCreated > 28) {
+        if (daysSinceCreated > 29) {
           debugPrint('➡️ Redirecting to QuestionPage');
           if (!mounted) return;
 
