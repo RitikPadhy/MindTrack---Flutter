@@ -35,15 +35,6 @@ class _ContentPage4State extends State<ContentPage4> {
   final ApiService _api = ApiService();
 
   static const String _createdAtStorageKey = 'user_created_at';
-  static const String _lastFeedbackSyncDateKey = 'last_feedback_sync_date';
-
-  // Slider keys
-  static const String _energyKey = 'feedback_energy';
-  static const String _satisfactionKey = 'feedback_satisfaction';
-  static const String _happinessKey = 'feedback_happiness';
-  static const String _proudKey = 'feedback_proud';
-  static const String _busyKey = 'feedback_busy';
-  static const String _feedbackTextKey = 'feedback_text';
 
   Timer? _weeklyTimer;
 
@@ -54,9 +45,9 @@ class _ContentPage4State extends State<ContentPage4> {
     _initPrefsAndLoad();
     _feedbackController.addListener(_updateFeedbackText);
 
-    // 🔄 Periodic weekly check every minute
-    _weeklyTimer = Timer.periodic(const Duration(minutes: 1), (_) async {
-      await _checkAndSyncFeedback();
+    // 🔄 Periodic weekly check every hour
+    _weeklyTimer = Timer.periodic(const Duration(hours: 1), (_) async {
+      await _syncAllUnsyncedWeeks();
     });
   }
 
@@ -72,7 +63,8 @@ class _ContentPage4State extends State<ContentPage4> {
     final newText = _feedbackController.text;
     if (feedbackText != newText) {
       setState(() => feedbackText = newText);
-      _prefs.setString(_feedbackTextKey, newText);
+      final currentWeek = _calculateWeekNumber(_createdAt!);
+      _prefs.setString(_getWeekStorageKey(currentWeek, 'text'), newText);
     }
   }
 
@@ -119,49 +111,52 @@ class _ContentPage4State extends State<ContentPage4> {
   Future<void> _initPrefsAndLoad() async {
     _prefs = await SharedPreferences.getInstance();
     await _loadCreatedAt();
-    await _loadSliderValues();
-    await _loadFeedbackText();
-    await _checkAndSyncFeedback(); // Immediately check if a week ended
+    await _loadCurrentWeekData();
+    await _syncAllUnsyncedWeeks(); // sync old weeks if needed
     if (mounted) setState(() {});
   }
 
   Future<void> _loadCreatedAt() async {
-    final storedCreatedAt = _prefs.getString(_createdAtStorageKey);
-    if (storedCreatedAt != null) {
-      final ts = int.tryParse(storedCreatedAt);
-      if (ts != null && ts > 0) {
-        final fullDate = DateTime.fromMillisecondsSinceEpoch(ts);
-        _createdAt = DateTime(fullDate.year, fullDate.month, fullDate.day);
-      }
+    final storedCreatedAtInt = _prefs.getInt(_createdAtStorageKey);
+
+    if (storedCreatedAtInt != null && storedCreatedAtInt > 0) {
+      final fullDate = DateTime.fromMillisecondsSinceEpoch(storedCreatedAtInt);
+      _createdAt = DateTime(fullDate.year, fullDate.month, fullDate.day);
     }
   }
 
-  Future<void> _loadSliderValues() async {
+  Future<void> _loadCurrentWeekData() async {
+    if (_createdAt == null) return;
+    final currentWeek = _calculateWeekNumber(_createdAt!);
+
     setState(() {
-      energy = _prefs.getDouble(_energyKey) ?? 0;
-      satisfaction = _prefs.getDouble(_satisfactionKey) ?? 0;
-      happiness = _prefs.getDouble(_happinessKey) ?? 0;
-      proud = _prefs.getDouble(_proudKey) ?? 0;
-      busy = _prefs.getDouble(_busyKey) ?? 0;
+      energy =
+          _prefs.getDouble(_getWeekStorageKey(currentWeek, 'energy')) ?? 0;
+      satisfaction =
+          _prefs.getDouble(_getWeekStorageKey(currentWeek, 'satisfaction')) ?? 0;
+      happiness =
+          _prefs.getDouble(_getWeekStorageKey(currentWeek, 'happiness')) ?? 0;
+      proud = _prefs.getDouble(_getWeekStorageKey(currentWeek, 'proud')) ?? 0;
+      busy = _prefs.getDouble(_getWeekStorageKey(currentWeek, 'busy')) ?? 0;
+      feedbackText =
+          _prefs.getString(_getWeekStorageKey(currentWeek, 'text')) ?? "";
+      _feedbackController.text = feedbackText;
     });
   }
 
-  Future<void> _loadFeedbackText() async {
-    final text = _prefs.getString(_feedbackTextKey) ?? "";
-    setState(() {
-      feedbackText = text;
-      _feedbackController.text = text;
-    });
-  }
+  // ---------------- Weekly Storage Helpers ----------------
+  String _getWeekStorageKey(int weekNumber, String type) =>
+      'feedback_week_${weekNumber}_$type';
+  String _getWeekSyncedKey(int weekNumber) =>
+      'feedback_week_${weekNumber}_synced';
 
-  // ---------------- Weekly Logic ----------------
   int _calculateWeekNumber(DateTime startDate) {
     final today = DateTime.now();
-    final daysSinceStart = DateTime(today.year, today.month, today.day)
-        .difference(startDate)
-        .inDays;
-    final weekIndex = (daysSinceStart / 7).floor();
-    return (weekIndex % 4) + 1;
+    final deltaDays =
+        DateTime(today.year, today.month, today.day).difference(startDate).inDays;
+    int weekNum = (deltaDays ~/ 7) + 1;
+    if (weekNum < 1) weekNum = 1;
+    return weekNum;
   }
 
   DateTime _calculateNextWeekStart(DateTime startDate) {
@@ -171,89 +166,72 @@ class _ContentPage4State extends State<ContentPage4> {
     return startDate.add(Duration(days: (weekIndex + 1) * 7));
   }
 
-  Future<void> _checkAndSyncFeedback() async {
-    if (_createdAt == null) return;
-
-    final nextWeekStart = _calculateNextWeekStart(_createdAt!);
-    final now = DateTime.now();
-
-    // Only sync if the week ended
-    if (now.isAfter(nextWeekStart)) {
-      final weekNumberToSync = _calculateWeekNumber(
-        _createdAt!.add(
-            Duration(days: ((now.difference(_createdAt!).inDays / 7).floor() - 1) * 7)),
-      );
-
-      try {
-        await _api.updateWeeklyFeedback(
-          weekNumber: weekNumberToSync,
-          energyLevels: energy,
-          satisfaction: satisfaction,
-          happiness: happiness,
-          proudOfAchievements: proud,
-          howBusy: busy,
-          feedbackText: feedbackText,
-        );
-
-        await _resetLocalFeedback();
-
-        await _prefs.setString(
-            _lastFeedbackSyncDateKey, now.toIso8601String());
-
-        _showCompletionNotification(weekNumberToSync);
-
-        if (mounted) {
-          final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(
-                  '${l10n.translate('feedback_saved')} $weekNumberToSync ${l10n.translate('saved_and_reset')}')));
-        }
-      } catch (e) {
-        if (mounted) {
-          final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(
-                  '${l10n.translate('failed_to_sync')} ${e.toString()} ${l10n.translate('local_data_retained')}')));
-        }
-      }
-    }
-  }
-
-  Future<void> _resetLocalFeedback() async {
-    await _prefs.setDouble(_energyKey, 0);
-    await _prefs.setDouble(_satisfactionKey, 0);
-    await _prefs.setDouble(_happinessKey, 0);
-    await _prefs.setDouble(_proudKey, 0);
-    await _prefs.setDouble(_busyKey, 0);
-    await _prefs.setString(_feedbackTextKey, "");
-    await _loadSliderValues();
-    await _loadFeedbackText();
-  }
-
   // ---------------- Slider Handlers ----------------
   void _updateEnergy(double v) {
     setState(() => energy = v);
-    _prefs.setDouble(_energyKey, v);
+    final currentWeek = _calculateWeekNumber(_createdAt!);
+    _prefs.setDouble(_getWeekStorageKey(currentWeek, 'energy'), v);
   }
 
   void _updateSatisfaction(double v) {
     setState(() => satisfaction = v);
-    _prefs.setDouble(_satisfactionKey, v);
+    final currentWeek = _calculateWeekNumber(_createdAt!);
+    _prefs.setDouble(_getWeekStorageKey(currentWeek, 'satisfaction'), v);
   }
 
   void _updateHappiness(double v) {
     setState(() => happiness = v);
-    _prefs.setDouble(_happinessKey, v);
+    final currentWeek = _calculateWeekNumber(_createdAt!);
+    _prefs.setDouble(_getWeekStorageKey(currentWeek, 'happiness'), v);
   }
 
   void _updateProud(double v) {
     setState(() => proud = v);
-    _prefs.setDouble(_proudKey, v);
+    final currentWeek = _calculateWeekNumber(_createdAt!);
+    _prefs.setDouble(_getWeekStorageKey(currentWeek, 'proud'), v);
   }
 
   void _updateBusy(double v) {
     setState(() => busy = v);
-    _prefs.setDouble(_busyKey, v);
+    final currentWeek = _calculateWeekNumber(_createdAt!);
+    _prefs.setDouble(_getWeekStorageKey(currentWeek, 'busy'), v);
+  }
+
+  // ---------------- Sync Unsynced Weeks ----------------
+  Future<void> _syncAllUnsyncedWeeks() async {
+    if (_createdAt == null) return;
+    final totalWeeks = _calculateWeekNumber(_createdAt!);
+    for (int week = 1; week <= totalWeeks; week++) {
+      final isSynced = _prefs.getBool(_getWeekSyncedKey(week)) ?? false;
+      if (!isSynced) {
+        await _syncWeek(week);
+      }
+    }
+  }
+
+  Future<void> _syncWeek(int weekNumber) async {
+    try {
+      await _api.updateWeeklyFeedback(
+        weekNumber: weekNumber,
+        energyLevels: (_prefs.getDouble(_getWeekStorageKey(weekNumber, 'energy')) ?? 0) / 10,
+        satisfaction: (_prefs.getDouble(_getWeekStorageKey(weekNumber, 'satisfaction')) ?? 0) / 10,
+        happiness: (_prefs.getDouble(_getWeekStorageKey(weekNumber, 'happiness')) ?? 0) / 10,
+        proudOfAchievements: (_prefs.getDouble(_getWeekStorageKey(weekNumber, 'proud')) ?? 0) / 10,
+        howBusy: (_prefs.getDouble(_getWeekStorageKey(weekNumber, 'busy')) ?? 0) / 10,
+        feedbackText: _prefs.getString(_getWeekStorageKey(weekNumber, 'text')) ?? '',
+      );
+
+      await _prefs.setBool(_getWeekSyncedKey(weekNumber), true);
+      _showCompletionNotification(weekNumber);
+
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('${l10n.translate('feedback_saved')} $weekNumber ${l10n.translate('saved_and_retained')}')));
+      }
+    } catch (e) {
+      debugPrint("Failed to sync week $weekNumber: $e");
+    }
   }
 
   // ---------------- Build UI ----------------

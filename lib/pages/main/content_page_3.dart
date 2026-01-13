@@ -31,7 +31,7 @@ class ContentPage3State extends State<ContentPage3> {
   List<Map<String, dynamic>> _scheduleData = [];
   String _userGender = 'female';
 
-  static const String _storageKey = 'checked_schedule_state';
+  String _getStorageKey(DateTime date) => 'checked_schedule_state_${_getDateKey(date)}';
 
   Timer? _midnightTimer;
 
@@ -126,13 +126,12 @@ class ContentPage3State extends State<ContentPage3> {
   }
 
   Future<void> _loadLocalCheckedState(String dateKey) async {
-    final jsonString = _prefs.getString(_storageKey);
+    final jsonString = _prefs.getString(_getStorageKey(_selectedDay));
     if (jsonString != null) {
       final Map<String, dynamic> loadedMap = Map<String, dynamic>.from(jsonDecode(jsonString));
+      _checkedState.clear();
       loadedMap.forEach((key, value) {
-        if (key.startsWith(dateKey)) {
-          _checkedState[key] = value is bool ? value : false;
-        }
+        _checkedState[key] = value is bool ? value : false;
       });
     }
   }
@@ -162,7 +161,17 @@ class ContentPage3State extends State<ContentPage3> {
   }
 
   Future<void> _saveCheckedState() async {
-    await _prefs.setString(_storageKey, jsonEncode(_checkedState));
+    final key = _getStorageKey(_selectedDay);
+    await _prefs.setString(key, jsonEncode(_checkedState));
+
+    // Optional: keep only last 30 days to avoid bloat
+    final allKeys = _prefs.getKeys().where((k) => k.startsWith('checked_schedule_state_')).toList();
+    if (allKeys.length > 30) {
+      allKeys.sort();
+      for (var i = 0; i < allKeys.length - 30; i++) {
+        await _prefs.remove(allKeys[i]);
+      }
+    }
   }
 
   void _handleBoxSelected(int scheduleIndex, int taskIndex, int boxIndex) async {
@@ -172,7 +181,6 @@ class ContentPage3State extends State<ContentPage3> {
     setState(() {
       _activeHourBox = scheduleIndex;
 
-      final dateKey = _getDateKey(_selectedDay);
       final key = _generateBoxKey(scheduleIndex, taskIndex, boxIndex);
 
       // Toggle the clicked box
@@ -196,40 +204,46 @@ class ContentPage3State extends State<ContentPage3> {
   // ------------------ Robust Midnight Watcher ------------------
   void _startMidnightWatcher() {
     _midnightTimer?.cancel();
-    _midnightTimer = Timer.periodic(const Duration(minutes: 1), (_) async {
-      final now = DateTime.now();
-      final keys = _checkedState.keys.toList();
 
-      // Detect keys from previous days
-      final prevDayKeys = keys.where((k) => !k.startsWith(_getDateKey(now))).toList();
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final duration = tomorrow.difference(now);
 
-      if (prevDayKeys.isNotEmpty) {
-        final prevDay = prevDayKeys.first.split('-')[0];
-        final Map<String, dynamic> prevDayState = {
-          for (var k in prevDayKeys) k: _checkedState[k]
-        };
+    _midnightTimer = Timer(duration, () async {
+      debugPrint("DEBUG: Midnight reached, pushing data...");
 
-        try {
-          final hourSlotsStatus = _transformCheckedStateToGranular(prevDay, prevDayState);
-          if (hourSlotsStatus.isNotEmpty) {
-            await _api.saveDayCompletionGranular(
-              date: prevDay,
-              hourSlotsStatus: hourSlotsStatus,
-            );
-            debugPrint("DEBUG: Pushed previous day data for $prevDay");
-          }
-        } catch (e) {
-          debugPrint("ERROR: Failed to push previous day data: $e");
-        }
+      // Push yesterday's data
+      await _pushPreviousDayData();
 
-        // Clear only previous day keys after successful update
-        for (var k in prevDayKeys) {
-          _checkedState.remove(k);
-        }
-        await _prefs.setString(_storageKey, jsonEncode(_checkedState));
-      }
+      // Reschedule for next midnight
+      _startMidnightWatcher();
     });
   }
+
+  Future<void> _pushPreviousDayData() async {
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    final key = _getStorageKey(yesterday);
+    final jsonString = _prefs.getString(key);
+    if (jsonString == null) return;
+
+    final Map<String, dynamic> prevDayState = Map<String, dynamic>.from(jsonDecode(jsonString));
+    if (prevDayState.isEmpty) return;
+
+    try {
+      final hourSlotsStatus = _transformCheckedStateToGranular(_getDateKey(yesterday), prevDayState);
+      if (hourSlotsStatus.isNotEmpty) {
+        await _api.saveDayCompletionGranular(
+          date: _getDateKey(yesterday),
+          hourSlotsStatus: hourSlotsStatus,
+        );
+        await _prefs.remove(key); // remove only after successful push
+        debugPrint("DEBUG: Pushed previous day data for ${_getDateKey(yesterday)}");
+      }
+    } catch (e) {
+      debugPrint("ERROR: Failed to push previous day data: $e");
+    }
+  }
+
 
   // ------------------ Transform Checked State ------------------
   Map<String, Map<String, bool>> _transformCheckedStateToGranular(
