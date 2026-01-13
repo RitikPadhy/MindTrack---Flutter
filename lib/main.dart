@@ -10,24 +10,8 @@ import 'package:mind_track/l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 🔹 Initialize Firebase first
-  try {
-    await Firebase.initializeApp();
-    debugPrint('✅ Firebase initialized');
-  } catch (e) {
-    debugPrint('❌ Error initializing Firebase: $e');
-  }
-
-  // 🔹 Initialize notifications
-  try {
-    await NotificationService().init();
-    await NotificationService().scheduleRandomDailyNotification();
-    await NotificationService().checkPendingNotifications();
-  } catch (e) {
-    debugPrint('❌ Error initializing notifications: $e');
-  }
-
+  await Firebase.initializeApp();
+  await NotificationService().init();
   runApp(const MyApp());
 }
 
@@ -71,10 +55,6 @@ class _MyAppState extends State<MyApp> {
     try {
       final isLoggedIn = await _api.tryAutoLogin();
       if (isLoggedIn) {
-        // Reschedule daily notifications after auto-login
-        await NotificationService().scheduleRandomDailyNotification();
-        await NotificationService().checkPendingNotifications();
-
         setState(() => _home = const MainView());
       } else {
         setState(() => _home = const AuthPage());

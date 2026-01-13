@@ -31,9 +31,6 @@ class _MainViewState extends State<MainView> with WidgetsBindingObserver {
 
     // 1️⃣ Check for QuestionPage redirect
     _checkQuestionPage();
-
-    // Ensure notifications are scheduled when main view loads
-    _ensureNotifications();
   }
 
   Future<void> printAllPrefs() async {
@@ -90,18 +87,8 @@ class _MainViewState extends State<MainView> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    // When app comes back to foreground, ensure notifications are still scheduled
     if (state == AppLifecycleState.resumed) {
-      debugPrint('🔄 App resumed, checking notifications...');
-      _ensureNotifications();
-    }
-  }
-
-  Future<void> _ensureNotifications() async {
-    try {
-      await NotificationService().ensureNotificationsScheduled();
-    } catch (e) {
-      debugPrint('⚠️ Error ensuring notifications: $e');
+      NotificationService().ensureNotificationScheduled();
     }
   }
 

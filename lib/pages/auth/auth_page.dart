@@ -6,6 +6,7 @@ import 'package:mind_track/pages/main/main_view.dart';
 import 'package:mind_track/services/api_service.dart';
 import 'package:mind_track/services/localization_service.dart';
 import 'package:mind_track/l10n/app_localizations.dart';
+import 'package:mind_track/services/notification_service.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -119,7 +120,10 @@ class _AuthPageState extends State<AuthPage> {
         final addresses = await _api.resolveApi();
         if (addresses.isEmpty) throw SocketException("No IP found for API");
       } on SocketException {
-        _showMessage(l10n.cannotReachServer);
+        if (mounted) {
+          _showMessage(l10n.cannotReachServer);
+          setState(() => _loading = false);
+        }
         return;
       }
 
@@ -130,6 +134,12 @@ class _AuthPageState extends State<AuthPage> {
 
         // Get profile which includes tasks
         await _api.getProfile();
+
+        try {
+          await NotificationService().ensureNotificationScheduled();
+        } catch (e) {
+          debugPrint('⚠️ Notification scheduling failed: $e');
+        }
 
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
