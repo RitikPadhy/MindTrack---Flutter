@@ -71,8 +71,56 @@ class ContentPage3State extends State<ContentPage3> {
 
   Future<void> _initPrefsAndLoad() async {
     _prefs = await SharedPreferences.getInstance();
+    final jsonString = _prefs.getString(ApiService.scheduleStorageKey);
+    if (jsonString != null) {
+      _scheduleData = (jsonDecode(jsonString) as List).cast<Map<String, dynamic>>();
+    }
+    await _pushAllPendingDays();
     await _loadUserProfile();
     await _loadDataForSelectedDay();
+  }
+
+  Future<void> _pushAllPendingDays() async {
+    final allKeys = _prefs
+        .getKeys()
+        .where((k) => k.startsWith('checked_schedule_state_'))
+        .toList();
+
+    final todayKey = _getDateKey(DateTime.now());
+
+    for (final key in allKeys) {
+      final datePart = key.replaceFirst('checked_schedule_state_', '');
+
+      // Never push today
+      if (datePart == todayKey) continue;
+
+      final jsonString = _prefs.getString(key);
+      if (jsonString == null) continue;
+
+      final Map<String, dynamic> state =
+      Map<String, dynamic>.from(jsonDecode(jsonString));
+
+      if (state.isEmpty) continue;
+
+      try {
+        final hourSlotsStatus =
+        _transformCheckedStateToGranular(datePart, state);
+
+        if (hourSlotsStatus.isNotEmpty) {
+          await _api.saveDayCompletionGranular(
+            date: datePart,
+            hourSlotsStatus: hourSlotsStatus,
+          );
+
+          // Mark as synced only after success
+          await _prefs.remove(key);
+          debugPrint("DEBUG: Catch-up pushed $datePart");
+        }
+      } catch (e) {
+        debugPrint("ERROR: Failed to push $datePart: $e");
+        // Keep key so it can retry next time
+      }
+    }
   }
 
   Future<void> _loadUserProfile() async {
@@ -98,22 +146,35 @@ class ContentPage3State extends State<ContentPage3> {
 
     final selectedDateKey = _getDateKey(_selectedDay);
     final today = DateTime.now();
+    final bool isToday = _isSameDay(_selectedDay, today);
 
     try {
-      final apiData = await _api.getDayRoutine(selectedDateKey);
+      if (isToday) {
+        // ------------------- TODAY -------------------
+        // Load schedule & checkedState from SharedPreferences only
+        final jsonString = _prefs.getString(ApiService.scheduleStorageKey);
+        if (jsonString != null) {
+          _scheduleData = (jsonDecode(jsonString) as List).cast<Map<String, dynamic>>();
+        }
 
-      if (apiData.containsKey('tasks') && apiData['tasks'] is List) {
-        _scheduleData = (apiData['tasks'] as List).cast<Map<String, dynamic>>();
-      } else {
-        _scheduleData = [];
-      }
-
-      if (_isSameDay(_selectedDay, today)) {
         await _loadLocalCheckedState(selectedDateKey);
       } else {
+        // ------------------- PAST DAYS -------------------
+        // Fetch from API
+        final apiData = await _api.getDayRoutine(selectedDateKey);
+
+        if (apiData.containsKey('tasks') && apiData['tasks'] is List) {
+          _scheduleData = (apiData['tasks'] as List).cast<Map<String, dynamic>>();
+        } else {
+          _scheduleData = [];
+        }
+
         _loadCheckedStateFromApiData(selectedDateKey, apiData);
       }
     } catch (e) {
+      debugPrint("ERROR loading schedule: $e");
+
+      // Fallback: try SharedPreferences
       final jsonString = _prefs.getString(ApiService.scheduleStorageKey);
       if (jsonString != null) {
         _scheduleData = (jsonDecode(jsonString) as List).cast<Map<String, dynamic>>();
@@ -138,26 +199,54 @@ class ContentPage3State extends State<ContentPage3> {
 
   void _loadCheckedStateFromApiData(String dateKey, Map<String, dynamic> apiData) {
     _checkedState.clear();
-    final Map<String, dynamic> routineData = apiData['routine'] ?? {};
-    final slotMinutes = ['00', '15', '30', '45'];
 
-    routineData.forEach((hour, hourData) {
-      final slots = hourData['slots'] as Map<String, dynamic>;
-      final int? scheduleIndex = int.tryParse(hour.substring(0, 2));
-      if (scheduleIndex == null) return;
-      final int index = scheduleIndex - 6;
+    // API returns "routine", not "routines"
+    final Map<String, dynamic> dayRoutines =
+    Map<String, dynamic>.from(apiData['routine'] ?? {});
 
-      if (index >= 0 && index < 17) {
-        for (int k = 0; k < 4; k++) {
-          final slotTime = hour.substring(0, 3) + slotMinutes[k];
-          final isFilled = slots[slotTime]?['filled'] ?? false;
-          if (isFilled) {
-            final key = "$dateKey-$index-0-$k";
-            _checkedState[key] = true;
-          }
+    dayRoutines.forEach((hour, hourData) {
+      if (hourData is! Map || hourData['slots'] == null) return;
+
+      final Map<String, dynamic> slots =
+      Map<String, dynamic>.from(hourData['slots']);
+      final int hourInt = int.tryParse(hour.split(":")[0]) ?? 0;
+      final int scheduleIndex = hourInt - 6; // 06:00 -> 0
+
+      if (scheduleIndex < 0 || scheduleIndex >= _scheduleData.length) return;
+
+      slots.forEach((slotTime, slotData) {
+        if (slotData is! Map) return;
+
+        final bool isFilled = slotData['filled'] == true;
+        final int? taskIndex =
+        slotData['taskIndex'] is int ? slotData['taskIndex'] : null;
+
+        if (isFilled && taskIndex != null) {
+          final key =
+              "$dateKey-$scheduleIndex-$taskIndex-${_minuteIndex(slotTime)}";
+          _checkedState[key] = true;
         }
-      }
+      });
     });
+
+    if (mounted) setState(() {});
+  }
+
+  /// Converts slot string "06:15" to index 0..3
+  int _minuteIndex(String slotTime) {
+    final minute = int.tryParse(slotTime.split(":")[1]) ?? 0;
+    switch (minute) {
+      case 0:
+        return 0;
+      case 15:
+        return 1;
+      case 30:
+        return 2;
+      case 45:
+        return 3;
+      default:
+        return 0;
+    }
   }
 
   Future<void> _saveCheckedState() async {
@@ -180,21 +269,27 @@ class ContentPage3State extends State<ContentPage3> {
 
     setState(() {
       _activeHourBox = scheduleIndex;
-
       final key = _generateBoxKey(scheduleIndex, taskIndex, boxIndex);
 
-      // Toggle the clicked box
-      final currentValue = _checkedState[key] ?? false;
-      _checkedState[key] = !currentValue;
+      final bool isNowChecked = !(_checkedState[key] ?? false);
 
-      // If it is now checked, uncheck same slot for other tasks in this hour
-      if (_checkedState[key] == true) {
-        final taskCount = _scheduleData[scheduleIndex]['tasks']?.length ?? 1;
+      if (isNowChecked) {
+        // Clear THIS SLOT (boxIndex) for all other tasks in this hour
+        final tasks = _scheduleData[scheduleIndex]['tasks'] ??
+            _scheduleData[scheduleIndex]['items'] ??
+            [];
+        final taskCount = tasks.length;
+
         for (int t = 0; t < taskCount; t++) {
-          if (t == taskIndex) continue; // skip current task
+          if (t == taskIndex) continue;
           final otherKey = _generateBoxKey(scheduleIndex, t, boxIndex);
           _checkedState[otherKey] = false;
         }
+
+        _checkedState[key] = true;
+      } else {
+        // Just uncheck this box
+        _checkedState[key] = false;
       }
     });
 
@@ -237,38 +332,53 @@ class ContentPage3State extends State<ContentPage3> {
           hourSlotsStatus: hourSlotsStatus,
         );
         await _prefs.remove(key); // remove only after successful push
-        debugPrint("DEBUG: Pushed previous day data for ${_getDateKey(yesterday)}");
+        debugPrint("DEBUG: Pushed current day data for ${_getDateKey(yesterday)}");
       }
     } catch (e) {
       debugPrint("ERROR: Failed to push previous day data: $e");
     }
   }
 
-
   // ------------------ Transform Checked State ------------------
-  Map<String, Map<String, bool>> _transformCheckedStateToGranular(
+  Map<String, Map<String, Map<String, dynamic>>> _transformCheckedStateToGranular(
       String dateKey, Map<String, dynamic> checkedState) {
-    final Map<String, Map<String, bool>> hourSlotsStatus = {};
-    final baseTime = DateTime(2000, 1, 1, 6, 0);
 
-    for (int i = 0; i < 17; i++) {
+    final Map<String, Map<String, Map<String, dynamic>>> hourSlotsStatus = {};
+    final baseTime = DateTime(2000, 1, 1, 6, 0); // Start at 6:00 AM
+
+    for (int i = 0; i < _scheduleData.length; i++) {
       final hourDt = baseTime.add(Duration(hours: i));
       final hourKey = DateFormat('HH:mm').format(hourDt);
-      final hourMap = <String, bool>{};
-      bool hourHasCompletion = false;
 
-      for (int k = 0; k < 4; k++) {
+      final taskList = _scheduleData[i]['tasks'] ?? _scheduleData[i]['items'] ?? [];
+      final Map<String, Map<String, dynamic>> hourMap = {};
+
+      for (int k = 0; k < 4; k++) { // 4 boxes (0, 15, 30, 45 mins)
         final slotDt = hourDt.add(Duration(minutes: k * 15));
         final slotKey = DateFormat('HH:mm').format(slotDt);
 
-        bool isSlotFilled = checkedState['$dateKey-$i-0-$k'] == true ||
-            checkedState['$dateKey-$i-1-$k'] == true;
+        int? filledTaskIndex;
+        for (int t = 0; t < taskList.length; t++) {
+          if (checkedState['$dateKey-$i-$t-$k'] == true) {
+            filledTaskIndex = t;
+            break;
+          }
+        }
 
-        hourMap[slotKey] = isSlotFilled;
-        if (isSlotFilled) hourHasCompletion = true;
+        if (filledTaskIndex != null) {
+          // Flat structure: slots -> "06:15" -> {filled: true, taskIndex: 0}
+          hourMap[slotKey] = {
+            "filled": true,
+            "taskIndex": filledTaskIndex,
+          };
+        }
       }
 
-      if (hourHasCompletion) hourSlotsStatus[hourKey] = hourMap;
+      if (hourMap.isNotEmpty) {
+        hourSlotsStatus[hourKey] = {
+          "slots": hourMap,
+        };
+      }
     }
 
     return hourSlotsStatus;

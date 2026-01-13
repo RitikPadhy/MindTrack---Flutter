@@ -231,7 +231,7 @@ class ApiService {
 
   Future<void> saveDayCompletionGranular({
     required String date,
-    required Map<String, Map<String, bool>> hourSlotsStatus,
+    required Map<String, Map<String, Map<String, dynamic>>> hourSlotsStatus,
   }) async {
     final resp = await http.patch(
       Uri.parse("$baseUrl/routines/update-day"),
@@ -243,7 +243,9 @@ class ApiService {
     );
 
     if (resp.statusCode != 200) {
-      throw Exception("Failed to save routine");
+      // This will help you catch 422 (validation) or 500 (logic) errors
+      debugPrint("SERVER ERROR: ${resp.statusCode} - ${resp.body}");
+      throw Exception("Failed to save routine: ${resp.body}");
     }
   }
 
