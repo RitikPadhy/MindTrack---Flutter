@@ -171,11 +171,25 @@ class ContentPage3State extends State<ContentPage3> {
 
     setState(() {
       _activeHourBox = scheduleIndex;
+
+      final dateKey = _getDateKey(_selectedDay);
       final key = _generateBoxKey(scheduleIndex, taskIndex, boxIndex);
-      _checkedState[key] = !(_checkedState[key] ?? false);
+
+      // Toggle the clicked box
+      final currentValue = _checkedState[key] ?? false;
+      _checkedState[key] = !currentValue;
+
+      // If it is now checked, uncheck same slot for other tasks in this hour
+      if (_checkedState[key] == true) {
+        final taskCount = _scheduleData[scheduleIndex]['tasks']?.length ?? 1;
+        for (int t = 0; t < taskCount; t++) {
+          if (t == taskIndex) continue; // skip current task
+          final otherKey = _generateBoxKey(scheduleIndex, t, boxIndex);
+          _checkedState[otherKey] = false;
+        }
+      }
     });
 
-    // Persist only locally
     await _saveCheckedState();
   }
 
