@@ -28,12 +28,10 @@ class ScheduleItem extends StatelessWidget {
     return "$dateKey-$scheduleIndex-$taskIndex-$boxIndex";
   }
 
-  // Helper method to translate task names
   String _translateTask(BuildContext context, String taskName) {
     final l10n = AppLocalizations.of(context);
     final lowerTask = taskName.toLowerCase();
-    
-    // Map common task names to translation keys
+
     if (lowerTask.contains('prayer')) return l10n.translate('task_prayer');
     if (lowerTask.contains('exercise')) return l10n.translate('task_exercise');
     if (lowerTask.contains('breakfast')) return l10n.translate('task_breakfast');
@@ -57,50 +55,31 @@ class ScheduleItem extends StatelessWidget {
     if (lowerTask.contains('bath')) return l10n.translate('task_bathing');
     if (lowerTask.contains('groom')) return l10n.translate('task_grooming');
     if (lowerTask.contains('medicine')) return l10n.translate('task_medicine');
-    
-    // If no match found, return original task name
+
     return taskName;
   }
 
-  // ✅ FIX: Modified to remove mutual exclusivity.
-  // The user can now tick all 4 boxes for Task 1 AND all 4 boxes for Task 2,
-  // even if they are in the same hour slot.
   bool _isDisabled(int taskIndex, int boxIndex) {
-    return false; // Boxes are always enabled for checking
+    return false; // all boxes always enabled
   }
 
-  // Builds the stacked/offset image panel on the right, now centered horizontally.
   Widget _buildTaskImages() {
-    // 1. Filter out tasks without a valid image path.
     final List<String> validImagePaths = tasks
         .map((task) => TaskImageMapper.getImagePath(task, userGender))
         .whereType<String>()
         .toList();
 
-    if (validImagePaths.isEmpty) {
-      // If no image is mapped, return nothing.
-      return const SizedBox.shrink();
-    }
+    if (validImagePaths.isEmpty) return const SizedBox.shrink();
 
-    // Determine if we need the wider area and greater height for diagonal stacking
-    final bool isTwoTasks = validImagePaths.length == 2;
-
-    // --- Image Dimension Constants ---
-
-    // Width (Conditional)
     const double kStandardImageAreaWidth = 100.0;
     const double kWideImageAreaWidth = 120.0;
-    final double kImageAreaWidth = isTwoTasks ? kWideImageAreaWidth : kStandardImageAreaWidth;
-
-    // Height and Fixed Constants
     const double kImageSize = 90.0;
     const double kOverlap = 60.0;
     const double kDiagonalShift = 20.0;
 
-    // Height (Conditional)
-    final double containerHeight = isTwoTasks
-        ? kImageSize + kOverlap
-        : kImageSize;
+    final bool isTwoTasks = validImagePaths.length == 2;
+    final double kImageAreaWidth = isTwoTasks ? kWideImageAreaWidth : kStandardImageAreaWidth;
+    final double containerHeight = isTwoTasks ? kImageSize + kOverlap : kImageSize;
 
     return SizedBox(
       width: kImageAreaWidth,
@@ -111,16 +90,14 @@ class ScheduleItem extends StatelessWidget {
           final imagePath = entry.value;
 
           final double topOffset = index == 0 ? 0.0 : kOverlap;
-          final double leftOffset = (isTwoTasks && index == 1)
-              ? kDiagonalShift
-              : 0.0;
+          final double leftOffset = (isTwoTasks && index == 1) ? kDiagonalShift : 0.0;
 
           return Positioned(
             top: topOffset,
             left: leftOffset,
             child: Material(
               elevation: 6,
-              shadowColor: Colors.black.withValues(alpha: 0.2),
+              shadowColor: Colors.black.withOpacity(0.2),
               clipBehavior: Clip.antiAlias,
               borderRadius: BorderRadius.circular(10),
               child: Image.asset(
@@ -128,9 +105,7 @@ class ScheduleItem extends StatelessWidget {
                 width: kImageSize,
                 height: kImageSize,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const SizedBox.shrink();
-                },
+                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
               ),
             ),
           );
@@ -156,24 +131,19 @@ class ScheduleItem extends StatelessWidget {
           ),
         ],
       ),
-      // Use IntrinsicHeight and Row to align content and image side-by-side
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ---------- LEFT SIDE: Time, Tasks, and Checkboxes (Expanded) ----------
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Time label
                   Text(
                     time,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   const SizedBox(height: 6),
-
-                  // Tasks list and check boxes
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: List.generate(tasks.length, (taskIndex) {
@@ -185,18 +155,14 @@ class ScheduleItem extends StatelessWidget {
                             style: const TextStyle(fontSize: 14, color: Colors.black87),
                           ),
                           const SizedBox(height: 6),
-
-                          // Four boxes per task with mutual exclusivity
                           Row(
                             children: List.generate(4, (boxIndex) {
                               final key = _generateBoxKey(taskIndex, boxIndex);
                               final isChecked = checkedState[key] ?? false;
-                              final isDisabled = _isDisabled(taskIndex, boxIndex); // Calls the fixed function
+                              final isDisabled = _isDisabled(taskIndex, boxIndex);
 
                               return GestureDetector(
-                                onTap: isDisabled
-                                    ? null
-                                    : () => onBoxSelected(taskIndex, boxIndex),
+                                onTap: isDisabled ? null : () => onBoxSelected(taskIndex, boxIndex),
                                 child: Opacity(
                                   opacity: isDisabled ? 0.4 : 1.0,
                                   child: Container(
@@ -209,16 +175,13 @@ class ScheduleItem extends StatelessWidget {
                                       color: Colors.transparent,
                                     ),
                                     child: isChecked
-                                        ? const Icon(Icons.check,
-                                        color: Colors.green, size: 20)
+                                        ? const Icon(Icons.check, color: Colors.green, size: 20)
                                         : null,
                                   ),
                                 ),
                               );
                             }),
                           ),
-
-                          // Divider between two tasks
                           if (taskIndex < tasks.length - 1)
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -235,8 +198,6 @@ class ScheduleItem extends StatelessWidget {
                 ],
               ),
             ),
-
-            // ---------- RIGHT SIDE: Images (Fixed Width) ----------
             const SizedBox(width: 12),
             _buildTaskImages(),
           ],

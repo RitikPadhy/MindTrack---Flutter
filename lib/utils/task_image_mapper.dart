@@ -2,68 +2,66 @@ import 'package:flutter/services.dart' show rootBundle;
 
 class TaskImageMapper {
   // -----------------------------
-  // Mapping from keywords to exact image filenames
+  // Priority-based keywords mapping
+  // First matching keyword wins
   // -----------------------------
-  static const Map<String, String> _wordToImage = {
-    "bathing": "Bath,Bathing",
-    "dressing": "Dressing",
-    "grooming": "Grooming, Self care",
-    "self care": "Grooming, Self care",
-    "eating": "Eat,Eating",
-    "exercise": "Exercise",
-    "medication management": "Medicine, Medication",
-    "cleaning": "Clean,Cleaning",
-    "cooking": "Cook,Cooking",
-    "laundry": "Laundry",
-    "with children": "With Children",
-    "with family": "With family .png",
-    "with friends": "With friends 1",
-    "call": "Call, Phone",
-    "phone": "Call, Phone",
-    "shopping": "Shopping",
-    "money management": "Money Management 1",
-    "work": "Work, Working 1",
-    "working": "Work, Working 1",
-    "studying": "Studying",
-    "class": "Studying",
-    "farm": "Farm, Farming",
-    "farming": "Farm, Farming",
-    "read": "Read, Reading",
-    "reading": "Read, Reading",
-    "write": "Write, Writing",
-    "writing": "Write, Writing",
-    "drawing": "Drawing, Painting",
-    "painting": "Drawing, Painting",
-    "walk": "Walk, Walking",
-    "walking": "Walk, Walking",
-    "running": "Run, Running",
-    "skipping": "Skipping",
-    "football": "Football",
-    "cricket": "Cricket",
-    "carroms": "Carroms",
-    "listening music": "Listening Music",
-    "meditation": "Meditation, Yoga 1",
-    "yoga": "Meditation, Yoga 1",
-    "watching tv": "Watching TV",
-    "gardening": "Gardening",
-    "sewing": "Sewing, Stitching",
-    "stitching": "Sewing, Stitching",
-    "cycling": "Cycling",
-    "pray": "Prayer",
-    "prayer": "Prayer",
-    "rest": "Sleep, Sleeping",
-    "sleep": "Sleep, Sleeping",
-  };
+  static const List<MapEntry<String, String>> _priorityWordList = [
+    MapEntry("bath", "Bath"),
+    MapEntry("dress", "Dressing"),
+    MapEntry("groom", "Self care"),
+    MapEntry("self care", "Self Care"),
+    MapEntry("eat", "Eat"),
+    MapEntry("exercise", "Exercise"),
+    MapEntry("clean", "Clean"),
+    MapEntry("cook", "Cook"),
+    MapEntry("laundry", "Laundry"),
+    MapEntry("with children", "Children"),
+    MapEntry("with family", "Family"),
+    MapEntry("with friends", "Friends"),
+    MapEntry("call", "Call"),
+    MapEntry("shopping", "Shopping"),
+    MapEntry("medication management", "Medicine"),
+    MapEntry("money management", "Money"),
+    MapEntry("work", "Work"),
+    MapEntry("studying", "Study"),
+    MapEntry("class", "Study"),
+    MapEntry("farm", "Farming"),
+    MapEntry("read", "Read"),
+    MapEntry("write", "Write"),
+    MapEntry("drawing", "Art"),
+    MapEntry("painting", "Art"),
+    MapEntry("walk", "Walk"),
+    MapEntry("running", "Running"),
+    MapEntry("skipping", "Skipping"),
+    MapEntry("football", "Football"),
+    MapEntry("cricket", "Cricket"),
+    MapEntry("carroms", "Carroms"),
+    MapEntry("listening music", "Listening music"),
+    MapEntry("meditation", "Yoga"),
+    MapEntry("yoga", "Yoga"),
+    MapEntry("watching tv", "Watching TV"),
+    MapEntry("gardening", "Gardening"),
+    MapEntry("stitching", "Stitching"),
+    MapEntry("cycling", "Cycling"),
+    MapEntry("pray", "Pray"),
+    MapEntry("rest", "Sleep"),
+    MapEntry("sleep", "Sleep"),
+  ];
 
+  // -----------------------------
+  // Normalize task string
+  // Lowercase, remove extra spaces
+  // -----------------------------
   static String _normalizeTaskName(String taskName) =>
       taskName.toLowerCase().trim();
 
-  /// Returns a Future path of the image, automatically falling back to common folder.
+  /// Returns the proper image path for a task and gender, with fallback to common folder
   static Future<String?> getImagePath(String taskName, String gender) async {
     final normalizedTask = _normalizeTaskName(taskName);
     String? selectedImage;
 
-    for (final entry in _wordToImage.entries) {
+    // Loop through priority list: first match wins
+    for (final entry in _priorityWordList) {
       if (normalizedTask.contains(entry.key)) {
         selectedImage = entry.value;
         break;
@@ -72,21 +70,22 @@ class TaskImageMapper {
 
     if (selectedImage == null) return null;
 
+    // Gender folder fallback
     final genderFolder = gender.toLowerCase() == 'male' ? 'male' : 'female';
     final genderPath = 'assets/tasks/$genderFolder/$selectedImage.png';
     final commonPath = 'assets/tasks/common/$selectedImage.png';
 
-    // Try loading the gender-specific asset
+    // Try gender-specific image first
     try {
       await rootBundle.load(genderPath);
       return genderPath;
     } catch (_) {
-      // Fallback to common folder if gender-specific asset is missing
+      // Fallback to common folder
       try {
         await rootBundle.load(commonPath);
         return commonPath;
       } catch (_) {
-        // If nothing exists, return null
+        // If not found anywhere
         return null;
       }
     }

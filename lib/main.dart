@@ -12,13 +12,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await NotificationService().init();
-
-  // ✅ Schedule daily notifications immediately
-  await NotificationService().ensureNotificationScheduled();
-
-  // ✅ Schedule a 15-second test notification (for debugging)
-  await NotificationService().scheduleImmediateReleaseTestNotification();
-
   runApp(const MyApp());
 }
 
@@ -39,6 +32,8 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _initializeApp();
+
+    _scheduleNotifications();
   }
 
   Future<void> _initializeApp() async {
@@ -50,6 +45,16 @@ class _MyAppState extends State<MyApp> {
 
     // Check login status
     _checkLogin();
+  }
+
+  Future<void> _scheduleNotifications() async {
+    try {
+      await NotificationService().ensureNotificationScheduled();
+      await NotificationService().scheduleImmediateReleaseTestNotification();
+      debugPrint('✅ Notifications scheduled successfully');
+    } catch (e) {
+      debugPrint('❌ Failed to schedule notifications: $e');
+    }
   }
 
   void changeLanguage(Locale locale) {
