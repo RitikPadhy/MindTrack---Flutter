@@ -71,7 +71,9 @@ class TaskImageMapper {
     if (selectedImage == null) return null;
 
     // Gender folder fallback
-    final genderFolder = gender.toLowerCase() == 'male' ? 'male' : 'female';
+    final genderFolder = (gender.toLowerCase() == 'male' || gender.toLowerCase() == 'female')
+        ? gender.toLowerCase()
+        : 'common';
     final genderPath = 'assets/tasks/$genderFolder/$selectedImage.png';
     final commonPath = 'assets/tasks/common/$selectedImage.png';
 

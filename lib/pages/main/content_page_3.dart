@@ -7,6 +7,7 @@ import 'package:mind_track/widgets/schedule_item.dart';
 import 'package:mind_track/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mind_track/services/api_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ContentPage3 extends StatefulWidget {
   const ContentPage3({super.key});
@@ -23,6 +24,8 @@ class ContentPage3State extends State<ContentPage3> {
   bool _isLoading = false;
 
   int? _activeHourBox;
+
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   // Local state for the current day's checked boxes
   final Map<String, bool> _checkedState = {};
@@ -124,11 +127,13 @@ class ContentPage3State extends State<ContentPage3> {
   }
 
   Future<void> _loadUserProfile() async {
-    final storedGender = _prefs.getString('gender');
+    final storedGender = await _secureStorage.read(key: 'gender');
     _userGender = (storedGender != null &&
         (storedGender.toLowerCase() == 'male' || storedGender.toLowerCase() == 'female'))
         ? storedGender.toLowerCase()
-        : null; // no default
+        : null;
+
+    debugPrint('DEBUG: loaded gender: $_userGender');
 
     if (mounted) setState(() {});
   }

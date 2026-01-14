@@ -133,7 +133,8 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
 
     if (data['gender'] != null) {
-      await _storage.write(key: 'gender', value: data['gender']);
+      final gender = data['gender'].toString().toLowerCase();
+      await _storage.write(key: 'gender', value: gender);
     }
 
     if (data['createdAt'] != null) {
