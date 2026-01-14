@@ -64,54 +64,62 @@ class ScheduleItem extends StatelessWidget {
   }
 
   Widget _buildTaskImages() {
-    final List<String> validImagePaths = tasks
-        .map((task) => TaskImageMapper.getImagePath(task, userGender))
-        .whereType<String>()
-        .toList();
+    return FutureBuilder<List<String>>(
+      future: _loadTaskImages(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
-    if (validImagePaths.isEmpty) return const SizedBox.shrink();
+        final validImagePaths = snapshot.data!;
+        const double kStandardImageAreaWidth = 100.0;
+        const double kWideImageAreaWidth = 120.0;
+        const double kImageSize = 90.0;
+        const double kOverlap = 60.0;
+        const double kDiagonalShift = 20.0;
+        final bool isTwoTasks = validImagePaths.length == 2;
+        final double kImageAreaWidth = isTwoTasks ? kWideImageAreaWidth : kStandardImageAreaWidth;
+        final double containerHeight = isTwoTasks ? kImageSize + kOverlap : kImageSize;
 
-    const double kStandardImageAreaWidth = 100.0;
-    const double kWideImageAreaWidth = 120.0;
-    const double kImageSize = 90.0;
-    const double kOverlap = 60.0;
-    const double kDiagonalShift = 20.0;
+        return SizedBox(
+          width: kImageAreaWidth,
+          height: containerHeight,
+          child: Stack(
+            children: validImagePaths.asMap().entries.map((entry) {
+              final index = entry.key;
+              final imagePath = entry.value;
+              final double topOffset = index == 0 ? 0.0 : kOverlap;
+              final double leftOffset = (isTwoTasks && index == 1) ? kDiagonalShift : 0.0;
 
-    final bool isTwoTasks = validImagePaths.length == 2;
-    final double kImageAreaWidth = isTwoTasks ? kWideImageAreaWidth : kStandardImageAreaWidth;
-    final double containerHeight = isTwoTasks ? kImageSize + kOverlap : kImageSize;
-
-    return SizedBox(
-      width: kImageAreaWidth,
-      height: containerHeight,
-      child: Stack(
-        children: validImagePaths.asMap().entries.map((entry) {
-          final index = entry.key;
-          final imagePath = entry.value;
-
-          final double topOffset = index == 0 ? 0.0 : kOverlap;
-          final double leftOffset = (isTwoTasks && index == 1) ? kDiagonalShift : 0.0;
-
-          return Positioned(
-            top: topOffset,
-            left: leftOffset,
-            child: Material(
-              elevation: 6,
-              shadowColor: Colors.black.withValues(alpha: 0.2),
-              clipBehavior: Clip.antiAlias,
-              borderRadius: BorderRadius.circular(10),
-              child: Image.asset(
-                imagePath,
-                width: kImageSize,
-                height: kImageSize,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+              return Positioned(
+                top: topOffset,
+                left: leftOffset,
+                child: Material(
+                  elevation: 6,
+                  shadowColor: Colors.black.withOpacity(0.2),
+                  clipBehavior: Clip.antiAlias,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    imagePath,
+                    width: kImageSize,
+                    height: kImageSize,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
+  }
+
+  // Helper function to await all images
+  Future<List<String>> _loadTaskImages() async {
+    final List<String?> paths = await Future.wait(
+        tasks.map((task) => TaskImageMapper.getImagePath(task, userGender)));
+    return paths.whereType<String>().toList();
   }
 
   @override

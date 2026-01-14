@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mind_track/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 
 class QuestionPage extends StatefulWidget {
@@ -21,6 +22,12 @@ class _QuestionPageState extends State<QuestionPage> {
   // true = Kannada, false = English
   bool _isKannada = false;
 
+  // Check if feedback already submitted
+  bool _alreadySubmitted = false;
+
+  // SharedPreferences key
+  static const String mauqSubmittedKey = 'mauq_submitted';
+
   @override
   void initState() {
     super.initState();
@@ -29,6 +36,22 @@ class _QuestionPageState extends State<QuestionPage> {
         feedbackText = _feedbackController.text;
       });
     });
+    _checkIfAlreadySubmitted();
+  }
+
+  Future<void> _checkIfAlreadySubmitted() async {
+    final prefs = await SharedPreferences.getInstance();
+    final alreadySubmitted = prefs.getBool(mauqSubmittedKey) ?? false;
+
+    if (alreadySubmitted && mounted) {
+      setState(() {
+        _alreadySubmitted = true;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Feedback was already submitted!")),
+      );
+    }
   }
 
   @override
@@ -45,6 +68,15 @@ class _QuestionPageState extends State<QuestionPage> {
 
     try {
       await _api.submitMAUQ(payload);
+
+      // Save flag locally
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(mauqSubmittedKey, true);
+
+      setState(() {
+        _alreadySubmitted = true;
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("MAUQ submitted successfully!")),
@@ -151,7 +183,9 @@ class _QuestionPageState extends State<QuestionPage> {
                 return _buildSlider(
                   label: "Q${index + 1}: ${_getQuestionText(index)}",
                   value: _answers[index],
-                  onChanged: (v) => setState(() => _answers[index] = v),
+                  onChanged: _alreadySubmitted
+                      ? null
+                      : (v) => setState(() => _answers[index] = v),
                 );
               }),
 
@@ -164,9 +198,10 @@ class _QuestionPageState extends State<QuestionPage> {
 
               // Submit
               ElevatedButton(
-                onPressed: _submitMAUQ,
+                onPressed: _alreadySubmitted ? null : _submitMAUQ,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.lightGreen,
+                  backgroundColor:
+                  _alreadySubmitted ? Colors.grey : Colors.lightGreen,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -189,7 +224,7 @@ class _QuestionPageState extends State<QuestionPage> {
   Widget _buildSlider({
     required String label,
     required double value,
-    required ValueChanged<double> onChanged,
+    ValueChanged<double>? onChanged,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -252,6 +287,7 @@ class _QuestionPageState extends State<QuestionPage> {
     return TextField(
       controller: _feedbackController,
       maxLines: 5,
+      enabled: !_alreadySubmitted,
       decoration: InputDecoration(
         hintText: _isKannada ? 'ಐಚ್ಛಿಕ ಪ್ರತಿಕ್ರಿಯೆ' : 'Optional Feedback',
         filled: true,

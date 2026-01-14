@@ -50,7 +50,6 @@ class _MyAppState extends State<MyApp> {
   Future<void> _scheduleNotifications() async {
     try {
       await NotificationService().ensureNotificationScheduled();
-      await NotificationService().scheduleImmediateReleaseTestNotification();
       debugPrint('✅ Notifications scheduled successfully');
     } catch (e) {
       debugPrint('❌ Failed to schedule notifications: $e');
