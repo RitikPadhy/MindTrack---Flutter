@@ -32,8 +32,13 @@ android {
     }
 
     buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("debug")
+        getByName("release") {
+            isMinifyEnabled = true           // <-- Kotlin DSL uses 'isMinifyEnabled'
+            isShrinkResources = true         // <-- Kotlin DSL uses 'isShrinkResources'
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
