@@ -124,16 +124,14 @@ class NotificationService {
     debugPrint('✅ Notification scheduled for $scheduled');
   }
 
-  Future<void> scheduleDebugTestNotification() async {
-    if (!kDebugMode) return; // 🚨 NEVER runs in release
-
-    final scheduled =
-    tz.TZDateTime.now(tz.local).add(const Duration(seconds: 15));
+  // Temporary testing function in NotificationService
+  Future<void> scheduleImmediateReleaseTestNotification() async {
+    final scheduled = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 15));
 
     await _plugin.zonedSchedule(
-      999, // test-only ID
+      999, // test ID
       'Test Notification',
-      'Debug test notification 🚀',
+      'Immediate test notification 🚀',
       scheduled,
       const fln.NotificationDetails(
         android: fln.AndroidNotificationDetails(
@@ -144,11 +142,10 @@ class NotificationService {
         ),
       ),
       androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-      fln.UILocalNotificationDateInterpretation.absoluteTime,
+      uiLocalNotificationDateInterpretation: fln.UILocalNotificationDateInterpretation.absoluteTime,
     );
 
-    debugPrint('🧪 DEBUG notification scheduled at $scheduled');
+    debugPrint('🧪 Immediate notification scheduled at $scheduled');
   }
 
   Future<void> showTestNotification() async {
