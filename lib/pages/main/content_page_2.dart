@@ -75,7 +75,8 @@ class _ContentPage2State extends State<ContentPage2> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     bool hasData = _topTasks.isNotEmpty;
-    bool hasZeroProgress = hasData && (_topTasks.first['percentage_done'] == 0.0);
+    bool hasZeroProgress = hasData &&
+        ((_topTasks.first['percentage_done'] ?? 0) <= 0);
 
     Widget contentWidget;
 
@@ -245,7 +246,12 @@ class _ContentPage2State extends State<ContentPage2> {
   List<PieChartSectionData> _getSections(List<Map<String, dynamic>> tasks) {
     if (tasks.isEmpty) return [];
 
-    final values = tasks.map<double>((t) => t['percentage_done'] as double).toList();
+    final values = tasks.map<double>((t) {
+      final v = t['percentage_done'];
+      if (v is int) return v.toDouble();
+      if (v is double) return v;
+      return 0.0;
+    }).toList();
     final titles = tasks.map<String>((t) => '${t['task']}\n${t['percentage_done']}%').toList();
 
     // Color range: from light green → soft golden-cream

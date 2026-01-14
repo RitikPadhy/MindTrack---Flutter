@@ -1,8 +1,8 @@
 import 'dart:math';
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:flutter/foundation.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -61,6 +61,11 @@ class NotificationService {
       await android.createNotificationChannel(channel);
 
       final granted = await android.requestNotificationsPermission();
+      if (granted != true) {
+        debugPrint('❌ Notifications permission denied');
+      } else {
+        debugPrint('✅ Notifications permission granted');
+      }
       debugPrint('🔔 Notification permission: $granted');
 
       final exactGranted = await android.requestExactAlarmsPermission();
@@ -117,6 +122,33 @@ class NotificationService {
     );
 
     debugPrint('✅ Notification scheduled for $scheduled');
+  }
+
+  Future<void> scheduleDebugTestNotification() async {
+    if (!kDebugMode) return; // 🚨 NEVER runs in release
+
+    final scheduled =
+    tz.TZDateTime.now(tz.local).add(const Duration(seconds: 15));
+
+    await _plugin.zonedSchedule(
+      999, // test-only ID
+      'Test Notification',
+      'Debug test notification 🚀',
+      scheduled,
+      const fln.NotificationDetails(
+        android: fln.AndroidNotificationDetails(
+          'daily_reminder',
+          'Daily Reminder',
+          importance: fln.Importance.high,
+          priority: fln.Priority.high,
+        ),
+      ),
+      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+      fln.UILocalNotificationDateInterpretation.absoluteTime,
+    );
+
+    debugPrint('🧪 DEBUG notification scheduled at $scheduled');
   }
 
   Future<void> showTestNotification() async {

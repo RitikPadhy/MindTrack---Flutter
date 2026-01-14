@@ -24,6 +24,8 @@ class _MainViewState extends State<MainView> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    NotificationService().ensureNotificationScheduled();
+    NotificationService().scheduleDebugTestNotification();
     _setSystemNavBar(); // initial styling
     WidgetsBinding.instance.addObserver(this);
 

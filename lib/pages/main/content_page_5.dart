@@ -28,6 +28,10 @@ class _ContentPage5State extends State<ContentPage5> {
     try {
       final apiAchievements = await ApiService().getWeeklyAchievements();
 
+      if (apiAchievements.isEmpty) {
+        throw Exception("Empty achievements");
+      }
+
       // Convert all values to String
       final List<Map<String, String>> formatted = apiAchievements.map((item) {
         return {
