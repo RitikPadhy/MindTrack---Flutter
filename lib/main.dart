@@ -12,6 +12,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await NotificationService().init();
+
+  // ✅ Schedule daily notifications immediately
+  await NotificationService().ensureNotificationScheduled();
+
+  // ✅ Schedule a 15-second test notification (for debugging)
+  await NotificationService().scheduleImmediateReleaseTestNotification();
+
   runApp(const MyApp());
 }
 
