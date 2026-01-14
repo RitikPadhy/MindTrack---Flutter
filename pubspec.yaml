@@ -44,3 +44,4 @@ flutter:
     - assets/tasks/
     - assets/tasks/female/
     - assets/tasks/male/
+    - assets/tasks/common/

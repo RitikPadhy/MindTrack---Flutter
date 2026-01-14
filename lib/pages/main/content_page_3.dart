@@ -29,7 +29,7 @@ class ContentPage3State extends State<ContentPage3> {
   late SharedPreferences _prefs;
 
   List<Map<String, dynamic>> _scheduleData = [];
-  String _userGender = 'female';
+  String? _userGender;
 
   String _getStorageKey(DateTime date) => 'checked_schedule_state_${_getDateKey(date)}';
 
@@ -124,12 +124,11 @@ class ContentPage3State extends State<ContentPage3> {
   }
 
   Future<void> _loadUserProfile() async {
-    const defaultGender = 'female';
     final storedGender = _prefs.getString('gender');
     _userGender = (storedGender != null &&
         (storedGender.toLowerCase() == 'male' || storedGender.toLowerCase() == 'female'))
         ? storedGender.toLowerCase()
-        : defaultGender;
+        : null; // no default
 
     if (mounted) setState(() {});
   }
@@ -559,7 +558,7 @@ class ContentPage3State extends State<ContentPage3> {
                       checkedState: _checkedState,
                       scheduleIndex: i,
                       dateKey: _getDateKey(_selectedDay),
-                      userGender: _userGender,
+                      userGender: _userGender ?? '',
                     );
                   },
                 ),

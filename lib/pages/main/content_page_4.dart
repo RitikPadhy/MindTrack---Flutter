@@ -159,13 +159,6 @@ class _ContentPage4State extends State<ContentPage4> {
     return weekNum;
   }
 
-  DateTime _calculateNextWeekStart(DateTime startDate) {
-    final today = DateTime.now();
-    final startOfToday = DateTime(today.year, today.month, today.day);
-    final weekIndex = (startOfToday.difference(startDate).inDays / 7).floor();
-    return startDate.add(Duration(days: (weekIndex + 1) * 7));
-  }
-
   // ---------------- Slider Handlers ----------------
   void _updateEnergy(double v) {
     setState(() => energy = v);

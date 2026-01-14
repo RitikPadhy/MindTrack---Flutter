@@ -72,9 +72,10 @@ class ScheduleItem extends StatelessWidget {
   // Builds the stacked/offset image panel on the right, now centered horizontally.
   Widget _buildTaskImages() {
     // 1. Filter out tasks without a valid image path.
-    final List<String> validImagePaths = tasks.map((task) {
-      return TaskImageMapper.getImagePath(task, userGender);
-    }).where((path) => path != null).cast<String>().toList();
+    final List<String> validImagePaths = tasks
+        .map((task) => TaskImageMapper.getImagePath(task, userGender))
+        .whereType<String>()
+        .toList();
 
     if (validImagePaths.isEmpty) {
       // If no image is mapped, return nothing.
