@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  final String baseUrl = "https://api.mindtrack.shop";
+  final String baseUrl = "https://mindtrack-backend-1.onrender.com";
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   static const String scheduleStorageKey = 'user_schedule_data';
