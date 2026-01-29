@@ -24,7 +24,6 @@ class _AuthPageState extends State<AuthPage> {
 
   bool _isLogin = true;
   bool _loading = false;
-  String _selectedLanguage = 'en';
 
   @override
   void initState() {

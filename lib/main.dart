@@ -101,7 +101,7 @@ class _MyAppState extends State<MyApp> {
 }
 
 class LocalizationProvider extends InheritedWidget {
-  final Function(Locale) changeLanguage;
+  final Function(String) changeLanguage;
 
   const LocalizationProvider({
     super.key,
