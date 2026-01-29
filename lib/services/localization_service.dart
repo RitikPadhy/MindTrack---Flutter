@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LocalizationService {
+class LocalizationService extends ChangeNotifier {
   static const String _languageKey = 'selected_language';
   
   // Singleton pattern
@@ -26,7 +26,12 @@ class LocalizationService {
   Future<Locale> loadLanguage() async {
     final prefs = await SharedPreferences.getInstance();
     final languageCode = prefs.getString(_languageKey) ?? 'en';
-    _currentLocale = Locale(languageCode);
+    
+    if (_currentLocale.languageCode != languageCode) {
+      _currentLocale = Locale(languageCode);
+      notifyListeners();
+    }
+    
     debugPrint('🌐 Loaded language: $languageCode');
     return _currentLocale;
   }
@@ -36,6 +41,7 @@ class LocalizationService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_languageKey, languageCode);
     _currentLocale = Locale(languageCode);
+    notifyListeners();
     debugPrint('🌐 Language set to: $languageCode');
   }
 

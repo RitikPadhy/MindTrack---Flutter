@@ -74,59 +74,76 @@ class NotificationService {
   }
 
   Future<void> ensureNotificationScheduled() async {
-    debugPrint('🔥 TEST ensureNotificationScheduled CALLED');
-
-    await _plugin.cancel(0);
-    debugPrint('🔥 TEST cancelled notification 0');
-
-    await _scheduleTomorrow();
+    await scheduleNext30Days();
   }
 
-  Future<void> _scheduleTomorrow() async {
+  Future<void> scheduleNext30Days() async {
+    debugPrint('📅 Scheduling notifications for next 30 days...');
+    
+    final List<fln.PendingNotificationRequest> pendingNotifications =
+        await _plugin.pendingNotificationRequests();
+    
+    final Set<int> pendingIds = pendingNotifications.map((n) => n.id).toSet();
     final now = tz.TZDateTime.now(tz.local);
 
-    // Random hour between 10 AM (10) and 10 PM (22)
-    final randomHour = 10 + _random.nextInt(13); // 10..22 inclusive
-    final randomMinute = _random.nextInt(60); // 0..59
+    for (int i = 0; i < 30; i++) {
+      final date = now.add(Duration(days: i));
+      final int id = _generateIdForDate(date);
 
-    // Schedule for today if the time is still in the future, otherwise schedule for tomorrow
-    tz.TZDateTime scheduled = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      randomHour,
-      randomMinute,
-    );
+      if (pendingIds.contains(id)) {
+        // Already scheduled for this date
+        continue;
+      }
 
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
+      // Determine time
+      // Random hour between 10 AM (10) and 10 PM (22)
+      final randomHour = 10 + _random.nextInt(13); // 10..22 inclusive
+      final randomMinute = _random.nextInt(60); // 0..59
 
-    await _plugin.zonedSchedule(
-      0,
-      '', // empty title
-      _phrases[_random.nextInt(_phrases.length)],
-      scheduled,
-      const fln.NotificationDetails(
-        android: fln.AndroidNotificationDetails(
-          'daily_reminder',
-          'Daily Reminder',
-          importance: fln.Importance.high,
-          priority: fln.Priority.high,
+      final scheduledDate = tz.TZDateTime(
+        tz.local,
+        date.year,
+        date.month,
+        date.day,
+        randomHour,
+        randomMinute,
+      );
+
+      // If scheduled time for today is in the past, skip it (don't push to tomorrow, as tomorrow has its own)
+      if (scheduledDate.isBefore(now)) {
+        continue;
+      }
+
+      await _plugin.zonedSchedule(
+        id,
+        '', // empty title
+        _phrases[_random.nextInt(_phrases.length)],
+        scheduledDate,
+        const fln.NotificationDetails(
+          android: fln.AndroidNotificationDetails(
+            'daily_reminder',
+            'Daily Reminder',
+            importance: fln.Importance.high,
+            priority: fln.Priority.high,
+          ),
         ),
-      ),
-      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-      fln.UILocalNotificationDateInterpretation.absoluteTime,
-    );
+        androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            fln.UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: fln.DateTimeComponents.dateAndTime, 
+      );
+      
+      debugPrint('✅ Scheduled for ${scheduledDate.toString()} (ID: $id)');
+    }
+  }
 
-    debugPrint('✅ Notification scheduled for $scheduled');
+  int _generateIdForDate(DateTime date) {
+    return int.parse("${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}");
   }
 
   Future<void> showTestNotification() async {
     await _plugin.show(
-      99,
+      999999,
       'Test',
       'Notifications are working 🎉',
       const fln.NotificationDetails(
