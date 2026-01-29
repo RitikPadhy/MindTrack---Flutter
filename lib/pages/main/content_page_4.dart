@@ -17,7 +17,7 @@ class ContentPage4 extends StatefulWidget {
   State<ContentPage4> createState() => _ContentPage4State();
 }
 
-class _ContentPage4State extends State<ContentPage4> {
+class _ContentPage4State extends State<ContentPage4> with WidgetsBindingObserver {
   // 🎚️ Slider states
   double energy = 0;
   double satisfaction = 0;
@@ -41,6 +41,7 @@ class _ContentPage4State extends State<ContentPage4> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeNotifications();
     _initPrefsAndLoad();
     _feedbackController.addListener(_updateFeedbackText);
@@ -53,10 +54,19 @@ class _ContentPage4State extends State<ContentPage4> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _feedbackController.removeListener(_updateFeedbackText);
     _feedbackController.dispose();
     _weeklyTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint("📱 App Resumed (Page 4) - Triggering sync...");
+      _syncAllUnsyncedWeeks();
+    }
   }
 
   void _updateFeedbackText() {

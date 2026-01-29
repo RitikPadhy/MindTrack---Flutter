@@ -16,7 +16,7 @@ class ContentPage3 extends StatefulWidget {
   ContentPage3State createState() => ContentPage3State();
 }
 
-class ContentPage3State extends State<ContentPage3> {
+class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver {
   DateTime _currentDate = DateTime.now();
   DateTime _selectedDay = DateTime.now();
 
@@ -50,6 +50,7 @@ class ContentPage3State extends State<ContentPage3> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initPrefsAndLoad();
       _startMidnightWatcher();
@@ -58,8 +59,25 @@ class ContentPage3State extends State<ContentPage3> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _midnightTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint("📱 App Resumed (Page 3) - Triggering sync...");
+      _pushAllPendingDays();
+      // Also reload data to ensure UI is fresh if day changed
+      if (!_isSameDay(DateTime.now(), _selectedDay)) {
+        setState(() {
+          _currentDate = DateTime.now();
+          _selectedDay = _currentDate;
+        });
+        _loadDataForSelectedDay();
+      }
+    }
   }
 
   String _getDateKey(DateTime date) => DateFormat('yyyy-MM-dd').format(date);

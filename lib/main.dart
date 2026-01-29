@@ -26,22 +26,17 @@ class _MyAppState extends State<MyApp> {
   final ApiService _api = ApiService();
   final LocalizationService _localizationService = LocalizationService();
   Widget _home = const Scaffold(body: Center(child: CircularProgressIndicator()));
-  Locale _locale = const Locale('en');
 
   @override
   void initState() {
     super.initState();
     _initializeApp();
-
     _scheduleNotifications();
   }
 
   Future<void> _initializeApp() async {
     // Load saved language
-    final savedLocale = await _localizationService.loadLanguage();
-    setState(() {
-      _locale = savedLocale;
-    });
+    await _localizationService.loadLanguage();
 
     // Check login status
     _checkLogin();
@@ -54,12 +49,6 @@ class _MyAppState extends State<MyApp> {
     } catch (e) {
       debugPrint('❌ Failed to schedule notifications: $e');
     }
-  }
-
-  void changeLanguage(Locale locale) {
-    setState(() {
-      _locale = locale;
-    });
   }
 
   Future<void> _checkLogin() async {
@@ -78,28 +67,33 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Better Days Daily',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      debugShowCheckedModeBanner: false,
-      locale: _locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('hi'),
-        Locale('kn'),
-        Locale('ml'),
-      ],
-      home: _home,
+    return AnimatedBuilder(
+      animation: _localizationService,
       builder: (context, child) {
-        return LocalizationProvider(
-          changeLanguage: changeLanguage,
-          child: child!,
+        return MaterialApp(
+          title: 'Better Days Daily',
+          theme: ThemeData(primarySwatch: Colors.blue),
+          debugShowCheckedModeBanner: false,
+          locale: _localizationService.currentLocale,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en'),
+            Locale('hi'),
+            Locale('kn'),
+            Locale('ml'),
+          ],
+          home: _home,
+          builder: (context, child) {
+            return LocalizationProvider(
+              changeLanguage: _localizationService.setLanguage, // Direct binding
+              child: child!,
+            );
+          },
         );
       },
     );

@@ -29,7 +29,6 @@ class _AuthPageState extends State<AuthPage> {
   @override
   void initState() {
     super.initState();
-    _loadLanguage();
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         systemNavigationBarColor: Color(0xFF2A3848),
@@ -40,20 +39,9 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  Future<void> _loadLanguage() async {
-    final locale = await _localizationService.loadLanguage();
-    setState(() {
-      _selectedLanguage = locale.languageCode;
-    });
-  }
-
   Future<void> _changeLanguage(String languageCode) async {
     await _localizationService.setLanguage(languageCode);
-    if (mounted) {
-      setState(() {
-        _selectedLanguage = languageCode;
-      });
-    }
+    // No need to setState, the global listener in main.dart will rebuild the app
   }
 
   void _showLanguageSelector() {
@@ -61,12 +49,13 @@ class _AuthPageState extends State<AuthPage> {
       context: context,
       builder: (context) {
         final l10n = AppLocalizations.of(context);
+        final currentLang = _localizationService.currentLocale.languageCode;
         return AlertDialog(
           title: Text(l10n.selectLanguage),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: LocalizationService.supportedLanguages.map((lang) {
-              final isSelected = lang.code == _selectedLanguage;
+              final isSelected = lang.code == currentLang;
               return ListTile(
                 title: Text(lang.nativeName),
                 subtitle: Text(lang.name),
@@ -210,7 +199,7 @@ class _AuthPageState extends State<AuthPage> {
                       const Icon(Icons.language, color: Colors.white, size: 18),
                       const SizedBox(width: 6),
                       Text(
-                        LocalizationService.getLanguageName(_selectedLanguage),
+                        LocalizationService.getLanguageName(_localizationService.currentLocale.languageCode),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
