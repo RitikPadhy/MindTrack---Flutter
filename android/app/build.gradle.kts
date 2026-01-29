@@ -51,19 +51,19 @@ android {
                 keyPassword = keyPasswordProp
                 storeFile = file(storeFileProp)
                 storePassword = storePasswordProp
-            } else {
-                println("⚠️ Release keys not found in key.properties. Falling back to debug signing.")
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-                storePassword = "android"
             }
         }
     }
 
     buildTypes {
         getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
+            // Fallback to debug signing if release keys are missing
+            if (keystoreProperties["storeFile"] != null) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                println("⚠️ Release keys not found. Using DEBUG signing config.")
+                signingConfig = signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
         }
