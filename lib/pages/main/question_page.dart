@@ -19,9 +19,6 @@ class _QuestionPageState extends State<QuestionPage> {
   String feedbackText = "";
   final TextEditingController _feedbackController = TextEditingController();
 
-  // true = Kannada, false = English
-  bool _isKannada = false;
-
   // Check if feedback already submitted
   bool _alreadySubmitted = false;
 
@@ -48,8 +45,9 @@ class _QuestionPageState extends State<QuestionPage> {
         _alreadySubmitted = true;
       });
 
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Feedback was already submitted!")),
+        SnackBar(content: Text(l10n.alreadySubmitted)),
       );
     }
   }
@@ -61,6 +59,7 @@ class _QuestionPageState extends State<QuestionPage> {
   }
 
   Future<void> _submitMAUQ() async {
+    final l10n = AppLocalizations.of(context);
     final Map<String, dynamic> payload = {
       for (int i = 0; i < 18; i++) "q${i + 1}": _answers[i].round(),
       "feedback_text": feedbackText,
@@ -79,13 +78,13 @@ class _QuestionPageState extends State<QuestionPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("MAUQ submitted successfully!")),
+          SnackBar(content: Text(l10n.submitSuccess)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to submit MAUQ: $e")),
+          SnackBar(content: Text("${l10n.submitFailed} $e")),
         );
       }
     }
@@ -112,7 +111,7 @@ class _QuestionPageState extends State<QuestionPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  _isKannada ? "MAUQ ಫಾರ್ಮ್" : "MAUQ Form",
+                  l10n.mauqForm,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 22,
@@ -122,23 +121,7 @@ class _QuestionPageState extends State<QuestionPage> {
                 ),
               ),
 
-              const SizedBox(height: 12),
-
-              // Language toggle
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    setState(() => _isKannada = !_isKannada);
-                  },
-                  child: Text(
-                    _isKannada ? "Switch to English" : "Switch to Kannada",
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
+              const SizedBox(height: 24),
 
               // Scale description (shown once)
               Container(
@@ -155,23 +138,14 @@ class _QuestionPageState extends State<QuestionPage> {
                   ],
                 ),
                 child: Text(
-                  _isKannada
-                      ? "ಈ ಪ್ರಶ್ನಾವಳಿಯಲ್ಲಿ:\n"
-                      "1 – ಸಂಪೂರ್ಣವಾಗಿ ಒಪ್ಪುವುದಿಲ್ಲ\n"
-                      "2 – ಒಪ್ಪುವುದಿಲ್ಲ\n"
-                      "3 – ಸ್ವಲ್ಪ ಮಟ್ಟಿಗೆ ಒಪ್ಪುವುದಿಲ್ಲ\n"
-                      "4 – ಒಪ್ಪುತ್ತೇನೆ ಅಥವಾ ಒಪ್ಪುವುದಿಲ್ಲ\n"
-                      "5 – ಸ್ವಲ್ಪ ಮಟ್ಟಿಗೆ ಒಪ್ಪುತ್ತೇನೆ\n"
-                      "6 – ಒಪ್ಪುತ್ತೇನೆ\n"
-                      "7 – ಸಂಪೂರ್ಣವಾಗಿ ಒಪ್ಪುತ್ತೇನೆ"
-                      : "In this questionnaire:\n"
-                      "1 – Strongly disagree\n"
-                      "2 – Disagree\n"
-                      "3 – Somewhat disagree\n"
-                      "4 – Neither agree nor disagree\n"
-                      "5 – Somewhat agree\n"
-                      "6 – Agree\n"
-                      "7 – Strongly agree",
+                  "${l10n.mauqDescription}\n"
+                  "${l10n.translate('mauq_scale_1')}\n"
+                  "${l10n.translate('mauq_scale_2')}\n"
+                  "${l10n.translate('mauq_scale_3')}\n"
+                  "${l10n.translate('mauq_scale_4')}\n"
+                  "${l10n.translate('mauq_scale_5')}\n"
+                  "${l10n.translate('mauq_scale_6')}\n"
+                  "${l10n.translate('mauq_scale_7')}",
                   style: const TextStyle(fontSize: 14),
                 ),
               ),
@@ -181,7 +155,7 @@ class _QuestionPageState extends State<QuestionPage> {
               // Questions
               ...List.generate(18, (index) {
                 return _buildSlider(
-                  label: "Q${index + 1}: ${_getQuestionText(index)}",
+                  label: "Q${index + 1}: ${l10n.translate('mauq_q${index + 1}')}",
                   value: _answers[index],
                   onChanged: _alreadySubmitted
                       ? null
@@ -192,7 +166,7 @@ class _QuestionPageState extends State<QuestionPage> {
               const SizedBox(height: 20),
 
               // Feedback
-              _buildFeedbackTextBox(),
+              _buildFeedbackTextBox(l10n),
 
               const SizedBox(height: 20),
 
@@ -208,8 +182,8 @@ class _QuestionPageState extends State<QuestionPage> {
                   ),
                 ),
                 child: Text(
-                  l10n.translate('Submit'),
-                  style: const TextStyle(fontSize: 16),
+                  l10n.submit,
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
 
@@ -226,6 +200,7 @@ class _QuestionPageState extends State<QuestionPage> {
     required double value,
     ValueChanged<double>? onChanged,
   }) {
+    final languageCode = AppLocalizations.of(context).locale.languageCode;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
@@ -269,7 +244,7 @@ class _QuestionPageState extends State<QuestionPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: List.generate(7, (i) {
-                String number = _isKannada
+                String number = (languageCode == 'kn')
                     ? ['೧', '೨', '೩', '೪', '೫', '೬', '೭'][i]
                     : '${i + 1}';
                 return Text(number,
@@ -283,63 +258,17 @@ class _QuestionPageState extends State<QuestionPage> {
     );
   }
 
-  Widget _buildFeedbackTextBox() {
+  Widget _buildFeedbackTextBox(AppLocalizations l10n) {
     return TextField(
       controller: _feedbackController,
       maxLines: 5,
       enabled: !_alreadySubmitted,
       decoration: InputDecoration(
-        hintText: _isKannada ? 'ಐಚ್ಛಿಕ ಪ್ರತಿಕ್ರಿಯೆ' : 'Optional Feedback',
+        hintText: l10n.optionalFeedback,
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
-  }
-
-  String _getQuestionText(int index) {
-    const englishQuestions = [
-      "The app was easy to use.",
-      "It was easy for me to learn to use the app.",
-      "The navigation was consistent between screens.",
-      "The interface allowed me to use all functions offered.",
-      "I could recover easily from mistakes.",
-      "I like the interface of the app.",
-      "Information was well organized.",
-      "App adequately acknowledged progress.",
-      "I feel comfortable using this app in social settings.",
-      "Time involved in using the app was fitting.",
-      "I would use this app again.",
-      "Overall, I am satisfied with this app.",
-      "The app is useful for my health and well-being.",
-      "The app improved my access to healthcare services.",
-      "The app helped me manage my health effectively.",
-      "This app has all expected functions and capabilities.",
-      "I could use the app even with poor internet connection.",
-      "The app provides an acceptable way to receive healthcare services."
-    ];
-
-    const kannadaQuestions = [
-      "ಆ್ಯಪ್ ಅನ್ನು ಬಳಸುವುದು ಸುಲಭವಾಗಿತ್ತು.",
-      "ಆ್ಯಪ್ ಅನ್ನು ಬಳಸುವುದು ಕಲಿಯುವುದು ನನಗೆ ಸುಲಭವಾಗಿದೆ.",
-      "ಸ್ಕ್ರೀನ್‌ಗಳ ನಡುವಿನ ನ್ಯಾವಿಗೇಶನ್ ಸಮಾನವಾಗಿತ್ತು.",
-      "ಇಂಟರ್‌ಫೇಸ್ ಎಲ್ಲಾ ಫಂಕ್ಷನ್‌ಗಳನ್ನು ಬಳಸಲು ಅನುಮತಿಸಿತು.",
-      "ತಪ್ಪುಗಳಿಂದ ಸುಲಭವಾಗಿ ಮರಳಿ ಬರುವಂತೆ ಮಾಡಲಾಗಿದೆ.",
-      "ನನಗೆ ಆ್ಯಪ್‌ನ ಇಂಟರ್‌ಫೇಸ್ ಇಷ್ಟವಾಗಿದೆ.",
-      "ಮಾಹಿತಿ ಚೆನ್ನಾಗಿ ಸಂಘಟಿತವಾಗಿದೆ.",
-      "ಆ್ಯಪ್ ಪ್ರಗತಿಯನ್ನು ಸೂಕ್ತವಾಗಿ ಗುರುತಿಸಿದೆ.",
-      "ಸಾಮಾಜಿಕ ಪರಿಸ್ಥಿತಿಗಳಲ್ಲಿ ಆ್ಯಪ್ ಬಳಕೆ ನನಗೆ ಅನುಕೂಲವಾಗಿದೆ.",
-      "ಆ್ಯಪ್ ಬಳಸಲು ತೆಗೆದುಕೊಂಡ ಸಮಯ ಸೂಕ್ತವಾಗಿದೆ.",
-      "ನಾನು ಈ ಆ್ಯಪ್ ಅನ್ನು ಮತ್ತೆ ಬಳಸುತ್ತೇನೆ.",
-      "ಒಟ್ಟಾರೆ, ನಾನು ಆ್ಯಪ್‌ನಿಂದ ಸಂತೃಪ್ತನಾಗಿದ್ದೇನೆ.",
-      "ಆ್ಯಪ್ ನನ್ನ ಆರೋಗ್ಯ ಮತ್ತು ಕಲ್ಯಾಣಕ್ಕೆ ಉಪಯುಕ್ತವಾಗಿದೆ.",
-      "ಆ್ಯಪ್ ಆರೋಗ್ಯ ಸೇವೆಗಳಿಗೆ ನನ್ನ ಪ್ರವೇಶವನ್ನು ಸುಧಾರಿಸಿದೆ.",
-      "ಆ್ಯಪ್ ನನ್ನ ಆರೋಗ್ಯವನ್ನು ಪರಿಣಾಮಕಾರಿಯಾಗಿ ನಿರ್ವಹಿಸಲು ಸಹಾಯ ಮಾಡಿತು.",
-      "ಈ ಆ್ಯಪ್ ಎಲ್ಲ ನಿರೀಕ್ಷಿತ ಕಾರ್ಯಕ್ಷಮತೆ ಮತ್ತು ಸಾಮರ್ಥ್ಯಗಳನ್ನು ಹೊಂದಿದೆ.",
-      "ತಗ್ಗಾದ ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕದಲ್ಲಿಯೂ ಆ್ಯಪ್ ಬಳಸಬಹುದು.",
-      "ಆ್ಯಪ್ ಆರೋಗ್ಯ ಸೇವೆಗಳನ್ನು ಪಡೆಯಲು ಸೂಕ್ತ ಮಾರ್ಗವನ್ನು ಒದಗಿಸುತ್ತದೆ."
-    ];
-
-    return _isKannada ? kannadaQuestions[index] : englishQuestions[index];
   }
 }

@@ -129,6 +129,42 @@ class AppLocalizations {
       'task_bathing': 'Bathing',
       'task_grooming': 'Grooming',
       'task_medicine': 'Medicine',
+
+      // MAUQ Form
+      'mauq_form': 'MAUQ Form',
+      'mauq_description': 'In this questionnaire:',
+      'mauq_scale_1': '1 – Strongly disagree',
+      'mauq_scale_2': '2 – Disagree',
+      'mauq_scale_3': '3 – Somewhat disagree',
+      'mauq_scale_4': '4 – Neither agree nor disagree',
+      'mauq_scale_5': '5 – Somewhat agree',
+      'mauq_scale_6': '6 – Agree',
+      'mauq_scale_7': '7 – Strongly agree',
+      'optional_feedback': 'Optional Feedback',
+      'submit': 'Submit',
+      'already_submitted': 'Feedback was already submitted!',
+      'submit_success': 'MAUQ submitted successfully!',
+      'submit_failed': 'Failed to submit MAUQ:',
+
+      // MAUQ Questions
+      'mauq_q1': 'The app was easy to use.',
+      'mauq_q2': 'It was easy for me to learn to use the app.',
+      'mauq_q3': 'The navigation was consistent between screens.',
+      'mauq_q4': 'The interface allowed me to use all functions offered.',
+      'mauq_q5': 'I could recover easily from mistakes.',
+      'mauq_q6': 'I like the interface of the app.',
+      'mauq_q7': 'Information was well organized.',
+      'mauq_q8': 'App adequately acknowledged progress.',
+      'mauq_q9': 'I feel comfortable using this app in social settings.',
+      'mauq_q10': 'Time involved in using the app was fitting.',
+      'mauq_q11': 'I would use this app again.',
+      'mauq_q12': 'Overall, I am satisfied with this app.',
+      'mauq_q13': 'The app is useful for my health and well-being.',
+      'mauq_q14': 'The app improved my access to healthcare services.',
+      'mauq_q15': 'The app helped me manage my health effectively.',
+      'mauq_q16': 'This app has all expected functions and capabilities.',
+      'mauq_q17': 'I could use the app even with poor internet connection.',
+      'mauq_q18': 'The app provides an acceptable way to receive healthcare services.',
     },
     'hi': {
       // Auth Page
@@ -246,6 +282,42 @@ class AppLocalizations {
       'task_bathing': 'स्नान',
       'task_grooming': 'तैयार होना',
       'task_medicine': 'दवा',
+
+      // MAUQ Form
+      'mauq_form': 'MAUQ फॉर्म',
+      'mauq_description': 'इस प्रश्नावली में:',
+      'mauq_scale_1': '1 – दृढ़ता से असहमत',
+      'mauq_scale_2': '2 – असहमत',
+      'mauq_scale_3': '3 – थोड़ा असहमत',
+      'mauq_scale_4': '4 – न सहमत और न असहमत',
+      'mauq_scale_5': '5 – थोड़ा सहमत',
+      'mauq_scale_6': '6 – सहमत',
+      'mauq_scale_7': '7 – दृढ़ता से सहमत',
+      'optional_feedback': 'वैकल्पिक फीडबैक',
+      'submit': 'सबमिट करें',
+      'already_submitted': 'फीडबैक पहले ही सबमिट किया जा चुका है!',
+      'submit_success': 'MAUQ सफलतापूर्वक सबमिट किया गया!',
+      'submit_failed': 'MAUQ सबमिट करने में विफल:',
+
+      // MAUQ Questions
+      'mauq_q1': 'ऐप का उपयोग करना आसान था।',
+      'mauq_q2': 'मेरे लिए ऐप का उपयोग करना सीखना आसान था।',
+      'mauq_q3': 'स्क्रीन के बीच नेविगेशन सुसंगत था।',
+      'mauq_q4': 'इंटरफ़ेस ने मुझे पेश किए गए सभी कार्यों का उपयोग करने की अनुमति दी।',
+      'mauq_q5': 'मैं गलतियों से आसानी से उबर सकता था।',
+      'mauq_q6': 'मुझे ऐप का इंटरफ़ेस पसंद है।',
+      'mauq_q7': 'जानकारी अच्छी तरह से व्यवस्थित थी।',
+      'mauq_q8': 'ऐप ने प्रगति को पर्याप्त रूप से स्वीकार किया।',
+      'mauq_q9': 'मैं सामाजिक सेटिंग्स में इस ऐप का उपयोग करने में सहज महसूस करता हूं।',
+      'mauq_q10': 'ऐप का उपयोग करने में लगने वाला समय उपयुक्त था।',
+      'mauq_q11': 'मैं इस ऐप का दोबारा उपयोग करूंगा।',
+      'mauq_q12': 'कुल मिलाकर, मैं इस ऐप से संतुष्ट हूं।',
+      'mauq_q13': 'ऐप मेरे स्वास्थ्य और कल्याण के लिए उपयोगी है।',
+      'mauq_q14': 'ऐप ने स्वास्थ्य सेवाओं तक मेरी पहुंच में सुधार किया।',
+      'mauq_q15': 'ऐप ने मुझे अपने स्वास्थ्य को प्रभावी ढंग से प्रबंधित करने में मदद की।',
+      'mauq_q16': 'इस ऐप में सभी अपेक्षित कार्य और क्षमताएं हैं।',
+      'mauq_q17': 'मैं खराब इंटरनेट कनेक्शन के साथ भी ऐप का उपयोग कर सकता था।',
+      'mauq_q18': 'ऐप स्वास्थ्य सेवाएं प्राप्त करने का एक स्वीकार्य तरीका प्रदान करता है।',
     },
     'kn': {
       // Auth Page
@@ -363,6 +435,42 @@ class AppLocalizations {
       'task_bathing': 'ಸ್ನಾನ',
       'task_grooming': 'ಅಲಂಕಾರ',
       'task_medicine': 'ಔಷಧ',
+
+      // MAUQ Form
+      'mauq_form': 'MAUQ ಫಾರ್ಮ್',
+      'mauq_description': 'ಈ ಪ್ರಶ್ನಾವಳಿಯಲ್ಲಿ:',
+      'mauq_scale_1': '1 – ಸಂಪೂರ್ಣವಾಗಿ ಒಪ್ಪುವುದಿಲ್ಲ',
+      'mauq_scale_2': '2 – ಒಪ್ಪುವುದಿಲ್ಲ',
+      'mauq_scale_3': '3 – ಸ್ವಲ್ಪ ಮಟ್ಟಿಗೆ ಒಪ್ಪುವುದಿಲ್ಲ',
+      'mauq_scale_4': '4 – ಒಪ್ಪುತ್ತೇನೆ ಅಥವಾ ಒಪ್ಪುವುದಿಲ್ಲ',
+      'mauq_scale_5': '5 – ಸ್ವಲ್ಪ ಮಟ್ಟಿಗೆ ಒಪ್ಪುತ್ತೇನೆ',
+      'mauq_scale_6': '6 – ಒಪ್ಪುತ್ತೇನೆ',
+      'mauq_scale_7': '7 – ಸಂಪೂರ್ಣವಾಗಿ ಒಪ್ಪುತ್ತೇನೆ',
+      'optional_feedback': 'ಐಚ್ಛಿಕ ಪ್ರತಿಕ್ರಿಯೆ',
+      'submit': 'ಸಲ್ಲಿಸು',
+      'already_submitted': 'ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಈಗಾಗಲೇ ಸಲ್ಲಿಸಲಾಗಿದೆ!',
+      'submit_success': 'MAUQ ಅನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸಲ್ಲಿಸಲಾಗಿದೆ!',
+      'submit_failed': 'MAUQ ಸಲ್ಲಿಸಲು ವಿಫಲವಾಗಿದೆ:',
+
+      // MAUQ Questions
+      'mauq_q1': 'ಆ್ಯಪ್ ಅನ್ನು ಬಳಸುವುದು ಸುಲಭವಾಗಿತ್ತು.',
+      'mauq_q2': 'ಆ್ಯಪ್ ಅನ್ನು ಬಳಸುವುದು ಕಲಿಯುವುದು ನನಗೆ ಸುಲಭವಾಗಿದೆ.',
+      'mauq_q3': 'ಸ್ಕ್ರೀನ್‌ಗಳ ನಡುವಿನ ನ್ಯಾವಿಗೇಶನ್ ಸಮಾನವಾಗಿತ್ತು.',
+      'mauq_q4': 'ಇಂಟರ್‌ಫೇಸ್ ಎಲ್ಲಾ ಫಂಕ್ಷನ್‌ಗಳನ್ನು ಬಳಸಲು ಅನುಮತಿಸಿತು.',
+      'mauq_q5': 'ತಪ್ಪುಗಳಿಂದ ಸುಲಭವಾಗಿ ಮರಳಿ ಬರುವಂತೆ ಮಾಡಲಾಗಿದೆ.',
+      'mauq_q6': 'ನನಗೆ ಆ್ಯಪ್‌ನ ಇಂಟರ್‌ಫೇಸ್ ಇಷ್ಟವಾಗಿದೆ.',
+      'mauq_q7': 'ಮಾಹಿತಿ ಚೆನ್ನಾಗಿ ಸಂಘಟಿತವಾಗಿದೆ.',
+      'mauq_q8': 'ಆ್ಯಪ್ ಪ್ರಗತಿಯನ್ನು ಸೂಕ್ತವಾಗಿ ಗುರುತಿಸಿದೆ.',
+      'mauq_q9': 'ಸಾಮಾಜಿಕ ಪರಿಸ್ಥಿತಿಗಳಲ್ಲಿ ಆ್ಯಪ್ ಬಳಕೆ ನನಗೆ ಅನುಕೂಲವಾಗಿದೆ.',
+      'mauq_q10': 'ಆ್ಯಪ್ ಬಳಸಲು ತೆಗೆದುಕೊಂಡ ಸಮಯ ಸೂಕ್ತವಾಗಿದೆ.',
+      'mauq_q11': 'ನಾನು ಈ ಆ್ಯಪ್ ಅನ್ನು ಮತ್ತೆ ಬಳಸುತ್ತೇನೆ.',
+      'mauq_q12': 'ಒಟ್ಟಾರೆ, ನಾನು ಆ್ಯಪ್‌ನಿಂದ ಸಂತೃಪ್ತನಾಗಿದ್ದೇನೆ.',
+      'mauq_q13': 'ಆ್ಯಪ್ ನನ್ನ ಆರೋಗ್ಯ ಮತ್ತು ಕಲ್ಯಾಣಕ್ಕೆ ಉಪಯುಕ್ತವಾಗಿದೆ.',
+      'mauq_q14': 'ಆ್ಯಪ್ ಆರೋಗ್ಯ ಸೇವೆಗಳಿಗೆ ನನ್ನ ಪ್ರವೇಶವನ್ನು ಸುಧಾರಿಸಿದೆ.',
+      'mauq_q15': 'ಆ್ಯಪ್ ನನ್ನ ಆರೋಗ್ಯವನ್ನು ಪರಿಣಾಮಕಾರಿಯಾಗಿ ನಿರ್ವಹಿಸಲು ಸಹಾಯ ಮಾಡಿತು.',
+      'mauq_q16': 'ಈ ಆ್ಯಪ್ ಎಲ್ಲ ನಿರೀಕ್ಷಿತ ಕಾರ್ಯಕ್ಷಮತೆ ಮತ್ತು ಸಾಮರ್ಥ್ಯಗಳನ್ನು ಹೊಂದಿದೆ.',
+      'mauq_q17': 'ತಗ್ಗಾದ ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕದಲ್ಲಿಯೂ ಆ್ಯಪ್ ಬಳಸಬಹುದು.',
+      'mauq_q18': 'ಆ್ಯಪ್ ಆರೋಗ್ಯ ಸೇವೆಗಳನ್ನು ಪಡೆಯಲು ಸೂಕ್ತ ಮಾರ್ಗವನ್ನು ಒದಗಿಸುತ್ತದೆ.',
     },
     'ml': {
       // Auth Page
@@ -481,6 +589,42 @@ class AppLocalizations {
       'task_bathing': 'കുളി',
       'task_grooming': 'ഒരുക്കം',
       'task_medicine': 'മരുന്ന്',
+
+      // MAUQ Form
+      'mauq_form': 'MAUQ ഫോം',
+      'mauq_description': 'ഈ ചോദ്യാവലിയിൽ:',
+      'mauq_scale_1': '1 – ശക്തമായി വിയോജിക്കുന്നു',
+      'mauq_scale_2': '2 – വിയോജിക്കുന്നു',
+      'mauq_scale_3': '3 – ഒരളവു വരെ വിയോജിക്കുന്നു',
+      'mauq_scale_4': '4 – യോജിക്കുകയോ വിയോജിക്കുകയോ ചെയ്യുന്നില്ല',
+      'mauq_scale_5': '5 – ഒരളവു വരെ യോജിക്കുന്നു',
+      'mauq_scale_6': '6 – യോജിക്കുന്നു',
+      'mauq_scale_7': '7 – ശക്തമായി യോജിക്കുന്നു',
+      'optional_feedback': 'ഓപ്ഷണൽ ഫീഡ്‌ബാക്ക്',
+      'submit': 'സമർപ്പിക്കുക',
+      'already_submitted': 'ഫീഡ്‌ബാക്ക് ഇതിനകം സമർപ്പിച്ചു!',
+      'submit_success': 'MAUQ വിജയകരമായി സമർപ്പിച്ചു!',
+      'submit_failed': 'MAUQ സമർപ്പിക്കുന്നതിൽ പരാജയപ്പെട്ടു:',
+
+      // MAUQ Questions
+      'mauq_q1': 'ആപ്പ് ഉപയോഗിക്കാൻ എളുപ്പമായിരുന്നു.',
+      'mauq_q2': 'ആപ്പ് ഉപയോഗിക്കാൻ പഠിക്കുന്നത് എനിക്ക് എളുപ്പമായിരുന്നു.',
+      'mauq_q3': 'സ്ക്രീനുകൾ തമ്മിലുള്ള നാവിഗേഷൻ സുസ്ഥിരമായിരുന്നു.',
+      'mauq_q4': 'വാഗ്ദാനം ചെയ്ത എല്ലാ പ്രവർത്തനങ്ങളും ഉപയോഗിക്കാൻ ഇന്റർഫേസ് എന്നെ അനുവദിച്ചു.',
+      'mauq_q5': 'തെറ്റുകളിൽ നിന്ന് എളുപ്പത്തിൽ കരകയറാൻ എനിക്ക് കഴിഞ്ഞു.',
+      'mauq_q6': 'എനിക്ക് ആപ്പിന്റെ ഇന്റർഫേസ് ഇഷ്ടപ്പെട്ടു.',
+      'mauq_q7': 'വിവരങ്ങൾ നന്നായി ക്രമീകരിച്ചിരുന്നു.',
+      'mauq_q8': 'ആപ്പ് പുരോഗതി വേണ്ടവിധം അംഗീകരിച്ചു.',
+      'mauq_q9': 'സാമൂഹിക സാഹചര്യങ്ങളിൽ ഈ ആപ്പ് ഉപയോഗിക്കുന്നത് എനിക്ക് സുഖകരമാണ്.',
+      'mauq_q10': 'ആപ്പ് ഉപയോഗിക്കാൻ എടുത്ത സമയം അനുയോജ്യമായിരുന്നു.',
+      'mauq_q11': 'ഞാൻ ഈ ആപ്പ് വീണ്ടും ഉപയോഗിക്കും.',
+      'mauq_q12': 'മൊത്തത്തിൽ, ഈ ആപ്പിൽ ഞാൻ സംതൃപ്തനാണ്.',
+      'mauq_q13': 'എന്റെ ആരോഗ്യത്തിനും ക്ഷേമത്തിനും ആപ്പ് ഉപകാരപ്രദമാണ്.',
+      'mauq_q14': 'ആപ്പ് എനിക്ക് ആരോഗ്യ സേവനങ്ങളിലേക്കുള്ള പ്രവേശനം മെച്ചപ്പെടുത്തി.',
+      'mauq_q15': 'എന്റെ ആരോഗ്യം ഫലപ്രദമായി കൈകാര്യം ചെയ്യാൻ ആപ്പ് എന്നെ സഹായിച്ചു.',
+      'mauq_q16': 'ഈ ആപ്പിൽ പ്രതീക്ഷിക്കുന്ന എല്ലാ പ്രവർത്തനങ്ങളും കഴിവുകളും ഉണ്ട്.',
+      'mauq_q17': 'മോശം ഇന്റർനെറ്റ് കണക്ഷനിൽ പോലും എനിക്ക് ആപ്പ് ഉപയോഗിക്കാൻ കഴിഞ്ഞു.',
+      'mauq_q18': 'ആരോഗ്യ സേവനങ്ങൾ സ്വീകരിക്കുന്നതിന് ആപ്പ് സ്വീകാര്യമായ ഒരു മാർഗ്ഗം നൽകുന്നു.',
     },
   };
 
@@ -521,6 +665,15 @@ class AppLocalizations {
   String get cancel => translate('cancel');
   String get ok => translate('ok');
   String get save => translate('save');
+
+  // MAUQ Form
+  String get mauqForm => translate('mauq_form');
+  String get mauqDescription => translate('mauq_description');
+  String get optionalFeedback => translate('optional_feedback');
+  String get submit => translate('submit');
+  String get alreadySubmitted => translate('already_submitted');
+  String get submitSuccess => translate('submit_success');
+  String get submitFailed => translate('submit_failed');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
