@@ -675,6 +675,15 @@ class AppLocalizations {
   String get cancel => translate('cancel');
   String get ok => translate('ok');
   String get save => translate('save');
+
+  // MAUQ Form
+  String get mauqForm => translate('mauq_form');
+  String get mauqDescription => translate('mauq_description');
+  String get optionalFeedback => translate('optional_feedback');
+  String get submit => translate('submit');
+  String get alreadySubmitted => translate('already_submitted');
+  String get submitSuccess => translate('submit_success');
+  String get submitFailed => translate('submit_failed');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

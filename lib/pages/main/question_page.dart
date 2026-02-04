@@ -215,8 +215,8 @@ class _QuestionPageState extends State<QuestionPage> {
                   ),
                 ),
                 child: Text(
-                  l10n.translate('Submit'),
-                  style: const TextStyle(fontSize: 16),
+                  l10n.submit,
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
 
@@ -255,6 +255,7 @@ class _QuestionPageState extends State<QuestionPage> {
     required List<String> numberSymbols,
     ValueChanged<double>? onChanged,
   }) {
+    final languageCode = AppLocalizations.of(context).locale.languageCode;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
