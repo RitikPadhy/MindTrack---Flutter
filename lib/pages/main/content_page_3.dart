@@ -33,10 +33,16 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
 
   List<Map<String, dynamic>> _scheduleData = [];
   String? _userGender;
+  String? _currentUid;
 
-  String _getStorageKey(DateTime date) => 'checked_schedule_state_${_getDateKey(date)}';
+  String _getStorageKey(DateTime date) {
+    final uid = _currentUid ?? 'unknown';
+    return 'checked_schedule_state_${uid}_${_getDateKey(date)}';
+  }
 
   Timer? _midnightTimer;
+  Timer? _syncTimer;
+  bool _isDirty = false;
 
   final List<String> times = [
     "6:00 AM - 7:00 AM", "7:00 AM - 8:00 AM", "8:00 AM - 9:00 AM",
@@ -61,6 +67,10 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _midnightTimer?.cancel();
+    _syncTimer?.cancel();
+    if (_isDirty) {
+      _syncCurrentState();
+    }
     super.dispose();
   }
 
@@ -77,6 +87,11 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
         });
         _loadDataForSelectedDay();
       }
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      if (_isDirty) {
+        debugPrint("📱 App Paused/Inactive - Forcing sync...");
+        _syncCurrentState();
+      }
     }
   }
 
@@ -92,28 +107,35 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
 
   Future<void> _initPrefsAndLoad() async {
     _prefs = await SharedPreferences.getInstance();
+    await _loadUserProfile(); // Load UID first
     final jsonString = _prefs.getString(ApiService.scheduleStorageKey);
     if (jsonString != null) {
       _scheduleData = (jsonDecode(jsonString) as List).cast<Map<String, dynamic>>();
     }
     await _pushAllPendingDays();
-    await _loadUserProfile();
     await _loadDataForSelectedDay();
   }
 
   Future<void> _pushAllPendingDays() async {
+    if (_currentUid == null) return;
+    
+    final userPrefix = 'checked_schedule_state_${_currentUid}_';
     final allKeys = _prefs
         .getKeys()
-        .where((k) => k.startsWith('checked_schedule_state_'))
+        .where((k) => k.startsWith(userPrefix))
         .toList();
 
     final todayKey = _getDateKey(DateTime.now());
 
     for (final key in allKeys) {
-      final datePart = key.replaceFirst('checked_schedule_state_', '');
+      final datePart = key.replaceFirst(userPrefix, '');
 
-      // Never push today
-      if (datePart == todayKey) continue;
+      // Optional: If you want to avoid pushing today during general catch-up
+      // but we decided to allow it if it's explicitly called. 
+      // However, _pushAllPendingDays is called on resume. 
+      // If we allow today here, it might conflict with the debounce.
+      // Let's allow it but check if it's dirty.
+      if (datePart == todayKey && _isDirty) continue;
 
       final jsonString = _prefs.getString(key);
       if (jsonString == null) continue;
@@ -134,24 +156,29 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
           );
 
           // Mark as synced only after success
+          // For today, we might NOT want to remove the key so it's available locally
+          // But the current logic removes keys to signify "synced".
+          // If we remove today's key, _loadDataForSelectedDay will fetch from API next time.
+          // That's fine as long as the API has it.
           await _prefs.remove(key);
+          if (datePart == todayKey) _isDirty = false;
           debugPrint("DEBUG: Catch-up pushed $datePart");
         }
       } catch (e) {
         debugPrint("ERROR: Failed to push $datePart: $e");
-        // Keep key so it can retry next time
       }
     }
   }
 
   Future<void> _loadUserProfile() async {
+    _currentUid = await _secureStorage.read(key: 'uid');
     final storedGender = await _secureStorage.read(key: 'gender');
     _userGender = (storedGender != null &&
         (storedGender.toLowerCase() == 'male' || storedGender.toLowerCase() == 'female'))
         ? storedGender.toLowerCase()
         : null;
 
-    debugPrint('DEBUG: loaded gender: $_userGender');
+    debugPrint('DEBUG: loaded UID: $_currentUid, gender: $_userGender');
 
     if (mounted) setState(() {});
   }
@@ -173,13 +200,24 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
     try {
       if (isToday) {
         // ------------------- TODAY -------------------
-        // Load schedule & checkedState from SharedPreferences only
+        // Load schedule from SharedPreferences
         final jsonString = _prefs.getString(ApiService.scheduleStorageKey);
         if (jsonString != null) {
           _scheduleData = (jsonDecode(jsonString) as List).cast<Map<String, dynamic>>();
         }
 
+        // Load local state first
         await _loadLocalCheckedState(selectedDateKey);
+
+        // If not dirty, try to fetch latest from API to ensure we have what's on server
+        if (!_isDirty) {
+          try {
+            final apiData = await _api.getDayRoutine(selectedDateKey);
+            _loadCheckedStateFromApiData(selectedDateKey, apiData);
+          } catch (e) {
+            debugPrint("DEBUG: Optional API fetch for today failed: $e");
+          }
+        }
       } else {
         // ------------------- PAST DAYS -------------------
         // Fetch from API
@@ -275,10 +313,13 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
     final key = _getStorageKey(_selectedDay);
     await _prefs.setString(key, jsonEncode(_checkedState));
 
-    // Optional: keep only last 30 days to avoid bloat
-    final allKeys = _prefs.getKeys().where((k) => k.startsWith('checked_schedule_state_')).toList();
+    // Optional: keep only last 30 days FOR THIS USER to avoid bloat
+    if (_currentUid == null) return;
+    final userPrefix = 'checked_schedule_state_${_currentUid}_';
+    final allKeys = _prefs.getKeys().where((k) => k.startsWith(userPrefix)).toList();
+    
     if (allKeys.length > 30) {
-      allKeys.sort();
+      allKeys.sort(); // Sorting date strings works
       for (var i = 0; i < allKeys.length - 30; i++) {
         await _prefs.remove(allKeys[i]);
       }
@@ -296,7 +337,6 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
       final bool isNowChecked = !(_checkedState[key] ?? false);
 
       if (isNowChecked) {
-        // Clear THIS SLOT (boxIndex) for all other tasks in this hour
         final tasks = _scheduleData[scheduleIndex]['tasks'] ??
             _scheduleData[scheduleIndex]['items'] ??
             [];
@@ -310,12 +350,40 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
 
         _checkedState[key] = true;
       } else {
-        // Just uncheck this box
         _checkedState[key] = false;
       }
+      _isDirty = true;
     });
 
     await _saveCheckedState();
+
+    // Debounced sync
+    _syncTimer?.cancel();
+    _syncTimer = Timer(const Duration(seconds: 5), () {
+      _syncCurrentState();
+    });
+  }
+
+  Future<void> _syncCurrentState() async {
+    if (!_isDirty) return;
+    
+    final dateKey = _getDateKey(_selectedDay);
+    try {
+      // Instead of just sending what's checked, we send the whole _checkedState 
+      // transformed to granular. This ensures unchecked items are also updated on the server.
+      final hourSlotsStatus = _transformCheckedStateToGranular(dateKey, _checkedState);
+      
+      // We always send the request if it's dirty, even if hourSlotsStatus is empty 
+      // (which would mean everything was unchecked).
+      await _api.saveDayCompletionGranular(
+        date: dateKey,
+        hourSlotsStatus: hourSlotsStatus,
+      );
+      _isDirty = false;
+      debugPrint("DEBUG: Sync optimized: Pushed full state for $dateKey");
+    } catch (e) {
+      debugPrint("ERROR: Failed to sync current state: $e");
+    }
   }
 
   // ------------------ Robust Midnight Watcher ------------------
@@ -338,6 +406,8 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
   }
 
   Future<void> _pushPreviousDayData() async {
+    if (_currentUid == null) return;
+    
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
     final key = _getStorageKey(yesterday);
     final jsonString = _prefs.getString(key);
@@ -354,7 +424,7 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
           hourSlotsStatus: hourSlotsStatus,
         );
         await _prefs.remove(key); // remove only after successful push
-        debugPrint("DEBUG: Pushed current day data for ${_getDateKey(yesterday)}");
+        debugPrint("DEBUG: Pushed yesterday's data for ${_getDateKey(yesterday)}");
       }
     } catch (e) {
       debugPrint("ERROR: Failed to push previous day data: $e");
@@ -387,20 +457,18 @@ class ContentPage3State extends State<ContentPage3> with WidgetsBindingObserver 
           }
         }
 
-        if (filledTaskIndex != null) {
-          // Flat structure: slots -> "06:15" -> {filled: true, taskIndex: 0}
-          hourMap[slotKey] = {
-            "filled": true,
-            "taskIndex": filledTaskIndex,
-          };
-        }
-      }
-
-      if (hourMap.isNotEmpty) {
-        hourSlotsStatus[hourKey] = {
-          "slots": hourMap,
+        // 100% Assurance: Always send the status (true OR false)
+        // so the server can explicitly uncheck items.
+        hourMap[slotKey] = {
+          "filled": filledTaskIndex != null,
+          "taskIndex": filledTaskIndex,
         };
       }
+
+      // We always send the hour if the app has schedule data for it
+      hourSlotsStatus[hourKey] = {
+        "slots": hourMap,
+      };
     }
 
     return hourSlotsStatus;

@@ -215,8 +215,8 @@ class _QuestionPageState extends State<QuestionPage> {
                   ),
                 ),
                 child: Text(
-                  l10n.translate('Submit'),
-                  style: const TextStyle(fontSize: 16),
+                  l10n.submit,
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
 
