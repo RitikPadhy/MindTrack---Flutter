@@ -255,7 +255,6 @@ class _QuestionPageState extends State<QuestionPage> {
     required List<String> numberSymbols,
     ValueChanged<double>? onChanged,
   }) {
-    final languageCode = AppLocalizations.of(context).locale.languageCode;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
